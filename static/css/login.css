@@ -1,0 +1,181 @@
+@font-face {
+    font-family: 'Golos Text';
+    src: url('../fonts/GolosText-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Golos Text';
+    src: url('../fonts/GolosText-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Golos Text', Arial, sans-serif;
+    background-color: #f8f9fa;
+}
+
+header {
+    background-color: #007bff;
+    color: white;
+    padding: 1rem;
+}
+
+footer {
+    background-color: #343a40;
+    color: white;
+    padding: 1rem 0;
+}
+
+.login-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 50px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    margin-top: -200px;
+}
+
+.login-container .login-logo {
+    width: 70px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+.login-container h2 {
+    margin-bottom: 20px;
+}
+
+.login-container .form-group {
+    margin-bottom: 15px;
+}
+
+.login-container .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.login-container .btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+.modal .modal-dialog {
+    max-width: 600px;
+}
+
+.modal .modal-content {
+    padding: 20px;
+}
+
+.modal .modal-header {
+    border-bottom: none;
+}
+
+.modal .modal-footer {
+    border-top: none;
+}
+
+.modal .form-control {
+    margin-bottom: 10px;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+}
+#map {
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+#upload {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: white;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.leaflet-popup-content-wrapper {
+    max-width: 100% !important;
+    width: auto !important;
+    padding: 10px !important;
+    border-radius: 8px !important;
+    background-color: #f9f9f9 !important;
+}
+
+.leaflet-popup-content {
+    padding: 5px !important;
+    margin: 0 !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 14px !important;
+    color: #333 !important;
+}
+
+.leaflet-popup-tip {
+    background: #f9f9f9 !important;
+}
+
+.leaflet-popup-close-button {
+    color: #333 !important;
+    font-size: 18px !important;
+    top: 5px !important;
+    right: 5px !important;
+}
+
+.leaflet-control-layers-toggle {
+    display: none !important;
+}
+
+.leaflet-control-layers-expanded {
+    display: block !important;
+    max-height: none !important;
+    width: auto;
+}
+
+.leaflet-control-layers {
+    background-color: white;
+    padding: 6px;
+    border-radius: 4px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-control-layers-list {
+    display: block !important;
+}
+
+.layer-control {
+    background-color: white;
+    padding: 10px;
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+.leaflet-div-icon {
+    border-radius: 50%;
+    background-color: #ff0303;
+}
