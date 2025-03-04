@@ -1,110 +1,99 @@
-
 {% extends "base.html" %}
 {% load static %}
 
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/requests_list.css' %}">
+{% endblock %}
+
 {% block content %}
-<h1>Список заявок</h1>
+<div class="container my-4">
+    <!-- Заголовок и кнопка создания заявки -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-4">Список заявок</h1>
+        <button id="createRequestBtn" class="btn btn-primary btn-lg">Создать заявку</button>
+    </div>
 
-<!-- Кнопка для открытия модального окна создания заявки -->
-<button id="createRequestBtn">Создать заявку</button>
+    <!-- Фильтры, сортировка и экспорт -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form id="filterForm" class="form-inline">
+                <div class="form-group mr-3">
+                    <label for="statusFilter" class="mr-2 font-weight-bold">Статус:</label>
+                    <select id="statusFilter" name="status" class="form-control">
+                        <option value="">Все</option>
+                        <option value="В работе">В работе</option>
+                        <option value="Выполнена">Выполнена</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-secondary">Применить</button>
+            </form>
+        </div>
+        <div class="col-md-6 text-right">
+            <a href="{% url 'export_excel' %}" class="btn btn-success mr-2">Экспорт в Excel</a>
+            <a href="{% url 'export_pdf' %}" class="btn btn-danger">Экспорт в PDF</a>
+        </div>
+    </div>
 
-<!-- Таблица заявок -->
-<table>
-  <thead>
-    <tr>
-      <th>Статус</th>
-      <th>Номер заявки</th>
-      <th>Тип объекта</th>
-      <th>Название объекта</th>
-      <th>Пикеты</th>
-      <th>Дата съемки</th>
-      <th>Тип съемки</th>
-      <th>Примечание</th>
-      <th>Создатель</th>
-      <th>Изм.</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for request in requests %}
-    <tr>
-      <td>{{ request.status }}</td>
-      <td>{{ request.id }}</td>
-      <td>{{ request.object_type }}</td>
-      <td>{{ request.object_name }}</td>
-      <td>{{ request.piket_from }} - {{ request.piket_to }}</td>
-      <td>{{ request.shoot_date_from }} - {{ request.shoot_date_to }}</td>
-      <td>
-        {% if request.orthophoto %}Ортофотоплан{% endif %}
-        {% if request.laser %}Лазерное сканирование{% endif %}
-        {% if request.panorama %}Панорама{% endif %}
-        {% if request.overview %}Обзорные фото{% endif %}
-      </td>
-      <td>{{ request.note }}</td>
-      <td>{{ request.username }}</td>
-      <td>
-        {% if user.is_staff or user.id == request.user_id %}
-          <a href="{% url 'request_edit' request.id %}" class="editRequestBtn">Редактировать</a>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<!-- Модальное окно для создания заявки -->
-<div id="createRequestModal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <span class="close">&times;</span>
-    <h2>Создать заявку</h2>
-    <form id="createRequestForm" method="post" action="{% url 'request_create' %}">
-      {% csrf_token %}
-      <label for="id_object_type">Тип объекта:</label>
-      <select id="id_object_type" name="object_type">
-        <option value="">Выберите тип</option>
-        {% for obj_type in object_types %}
-          <option value="{{ obj_type.id }}">{{ obj_type.type_name }}</option>
-        {% endfor %}
-      </select>
-      <br>
-      <label for="id_object_name">Название объекта:</label>
-      <select id="id_object_name" name="object_name">
-        <option value="">Выберите название</option>
-        <!-- Значения будут подгружаться динамически -->
-      </select>
-      <br>
-      <!-- Остальные поля, например: -->
-      <label for="id_piket_from">Пикет от:</label>
-      <input type="number" id="id_piket_from" name="piket_from">
-      <br>
-      <label for="id_piket_to">Пикет до:</label>
-      <input type="number" id="id_piket_to" name="piket_to">
-      <br>
-      <label for="id_shoot_date_from">Дата съемки от:</label>
-      <input type="date" id="id_shoot_date_from" name="shoot_date_from">
-      <br>
-      <label for="id_shoot_date_to">Дата съемки до:</label>
-      <input type="date" id="id_shoot_date_to" name="shoot_date_to">
-      <br>
-      <!-- Флажки для типа съемки -->
-      <label><input type="checkbox" name="orthophoto" id="id_orthophoto"> Ортофотоплан</label>
-      <label><input type="checkbox" name="laser" id="id_laser"> Лазерное сканирование</label>
-      <label><input type="checkbox" name="panorama" id="id_panorama"> Панорама</label>
-      <label><input type="checkbox" name="overview" id="id_overview"> Обзорные фото</label>
-      <br>
-      <label for="id_note">Примечание:</label>
-      <textarea id="id_note" name="note"></textarea>
-      <br>
-      <button type="submit">Сохранить</button>
-    </form>
-  </div>
+    <!-- Таблица заявок -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Статус</th>
+                    <th>Номер заявки</th>
+                    <th>Тип объекта</th>
+                    <th>Название объекта</th>
+                    <th>Пикеты</th>
+                    <th>Дата съемки</th>
+                    <th>Тип съемки</th>
+                    <th>Примечание</th>
+                    <th>Создатель</th>
+                    <th>Изм.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for request in requests %}
+                <tr>
+                    <td>{{ request.status }}</td>
+                    <td>{{ request.id }}</td>
+                    <td>{{ request.object_type.type_name }}</td>
+                    <td>{{ request.object_name.object_name }}</td>
+                    <td>{{ request.piket_from }} - {{ request.piket_to }}</td>
+                    <td>{{ request.shoot_date_from|date:"d.m.Y" }} - {{ request.shoot_date_to|date:"d.m.Y" }}</td>
+                    <td>
+                        {% if request.orthophoto %}<span class="badge badge-info">Ортофотоплан</span><br>{% endif %}
+                        {% if request.laser %}<span class="badge badge-warning">Лазерное сканирование</span><br>{% endif %}
+                        {% if request.panorama %}<span class="badge badge-primary">Панорама</span><br>{% endif %}
+                        {% if request.overview %}<span class="badge badge-secondary">Обзорные фото</span>{% endif %}
+                    </td>
+                    <td>{{ request.note }}</td>
+                    <td>{{ request.username }}</td>
+                    <td>
+                        {% if user.is_staff or user.id == request.user_id %}
+                            <button class="btn btn-sm btn-outline-primary editRequestBtn" data-request-id="{{ request.id }}">
+                                Редактировать
+                            </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center">Заявок не найдено.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<!-- Модальное окно для редактирования заявки можно реализовать аналогично -->
-<!-- ... -->
+<!-- Включаем модальные окна для создания и редактирования заявок -->
+{% include "main_app/modal_create.html" %}
+{% include "main_app/modal_edit.html" %}
+{% endblock %}
 
-<!-- Передаем URL для AJAX-запроса динамической загрузки объектов -->
-<script>
-  window.getObjectNamesUrl = "{% url 'get_object_names' %}";
-</script>
-<script src="{% static 'js/requests.js' %}"></script>
+{% block extra_js %}
+<script src="{% static 'js/requests_list.js' %}"></script>
+<script src="{% static 'js/modal_create.js' %}"></script>
+<script src="{% static 'js/modal_edit.js' %}"></script>
 {% endblock %}

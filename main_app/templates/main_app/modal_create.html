@@ -1,0 +1,76 @@
+{% load static %}
+
+<!-- Модальное окно для создания заявки -->
+<div id="createRequestModal" class="modal" style="display: none;">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Создать заявку</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="createRequestForm" method="post" action="{% url 'request_create' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="id_object_type">Тип объекта:</label>
+            <select id="id_object_type" name="object_type" class="form-control">
+              <option value="">Выберите тип</option>
+              {% for obj_type in object_types %}
+                <option value="{{ obj_type.id }}">{{ obj_type.type_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="id_object_name">Название объекта:</label>
+            <select id="id_object_name" name="object_name" class="form-control">
+              <option value="">Выберите название</option>
+              <!-- Список будет подгружаться динамически -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="id_piket_from">Пикет от:</label>
+            <input type="number" id="id_piket_from" name="piket_from" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="id_piket_to">Пикет до:</label>
+            <input type="number" id="id_piket_to" name="piket_to" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="id_shoot_date_from">Дата съемки от:</label>
+            <input type="date" id="id_shoot_date_from" name="shoot_date_from" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="id_shoot_date_to">Дата съемки до:</label>
+            <input type="date" id="id_shoot_date_to" name="shoot_date_to" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Тип съемки:</label><br>
+            <div class="form-check form-check-inline">
+              <input type="checkbox" id="id_orthophoto" name="orthophoto" class="form-check-input">
+              <label class="form-check-label" for="id_orthophoto">Ортофотоплан</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input type="checkbox" id="id_laser" name="laser" class="form-check-input">
+              <label class="form-check-label" for="id_laser">Лазерное сканирование</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input type="checkbox" id="id_panorama" name="panorama" class="form-check-input">
+              <label class="form-check-label" for="id_panorama">Панорама</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input type="checkbox" id="id_overview" name="overview" class="form-check-input">
+              <label class="form-check-label" for="id_overview">Обзорные фото</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="id_note">Примечание:</label>
+            <textarea id="id_note" name="note" class="form-control"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

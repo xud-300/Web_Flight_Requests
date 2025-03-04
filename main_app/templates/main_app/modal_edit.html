@@ -1,0 +1,30 @@
+{% load static %}
+
+<!-- Модальное окно для редактирования заявки -->
+<div id="editRequestModal" class="modal" style="display: none;">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Редактировать заявку</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Форма для редактирования. Действие и поля будут подгружаться динамически через AJAX -->
+        <form id="editRequestForm" method="post" action="">
+          {% csrf_token %}
+          <div id="editRequestFormFields">
+            <!-- Здесь будут динамически загружены поля формы редактирования заявки -->
+          </div>
+          <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+        </form>
+        <hr>
+        <h6>История изменений</h6>
+        <div id="requestHistory">
+          <!-- Здесь будет отображаться история изменений заявки -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

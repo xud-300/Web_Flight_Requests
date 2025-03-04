@@ -1,0 +1,161 @@
+/* Общие стили для страницы */
+body {
+    background-color: #f5f7fa; /* светлый, нейтральный фон */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+  }
+  
+  /* Контейнер страницы */
+  .container.my-4 {
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Заголовок */
+  h1.display-4 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+  }
+  
+  /* Кнопка "Создать заявку" */
+  .btn-primary.btn-lg {
+    background-color: #3498db;
+    border: none;
+    transition: background-color 0.3s ease;
+  }
+  
+  .btn-primary.btn-lg:hover {
+    background-color: #2980b9;
+  }
+  
+  /* Стили для формы фильтрации */
+  .form-inline .form-group label {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  /* Стили таблицы */
+  .table-responsive {
+    margin-top: 20px;
+  }
+  
+  .table thead th {
+    background-color: #34495e;
+    color: #fff;
+    border: none;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.05rem;
+  }
+  
+  .table tbody td {
+    vertical-align: middle;
+  }
+  
+  .table-bordered {
+    border: 1px solid #e0e0e0;
+  }
+  
+  .table-bordered th,
+  .table-bordered td {
+    border: 1px solid #e0e0e0;
+  }
+  
+  /* Кнопка редактирования */
+  .btn-outline-primary {
+    border: 1px solid #3498db;
+    color: #3498db;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-outline-primary:hover {
+    background-color: #3498db;
+    color: #fff;
+  }
+  
+  /* Модальные окна */
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    display: none; /* скрыто по умолчанию */
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-dialog {
+    max-width: 600px;
+    margin: 1.75rem auto;
+  }
+  
+  .modal-content {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Заголовок модального окна */
+  .modal-header {
+    background: #f1f1f1;
+    padding: 15px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .modal-header .modal-title {
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  
+  /* Тело модального окна */
+  .modal-body {
+    padding: 20px;
+  }
+  
+  /* Кнопка закрытия модального окна */
+  .close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  
+  .close:hover {
+    color: #000;
+  }
+  
+  /* Стили для бейджей статусов */
+  .badge {
+    font-size: 0.8rem;
+    padding: 0.4em 0.6em;
+    border-radius: 4px;
+  }
+  
+  .badge-info {
+    background-color: #1abc9c;
+    color: #fff;
+  }
+  
+  .badge-warning {
+    background-color: #f39c12;
+    color: #fff;
+  }
+  
+  .badge-primary {
+    background-color: #3498db;
+    color: #fff;
+  }
+  
+  .badge-secondary {
+    background-color: #95a5a6;
+    color: #fff;
+  }

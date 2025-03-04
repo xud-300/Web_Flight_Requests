@@ -3,9 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Мое приложение</title>
+    {% block extra_head %}
+    {% endblock %}
 </head>
 <body>
     {% block content %}
+    {% endblock %}
+    
+    {% block extra_js %}
     {% endblock %}
 </body>
 </html>
