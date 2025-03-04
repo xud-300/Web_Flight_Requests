@@ -80,7 +80,7 @@ def user_login(request):
                 cache.delete(failed_attempts_key)  # Сбрасываем счетчик после успешного входа
                 
                 # Изменяем редирект на главную страницу
-                return JsonResponse({'success': True, 'redirect_url': reverse('main_page')})
+                return JsonResponse({'success': True, 'redirect_url': reverse('requests_list')})
             else:
                 cache.set(failed_attempts_key, (failed_attempts, first_attempt_time), timeout=120)
                 return JsonResponse({
@@ -113,7 +113,7 @@ def user_login(request):
 # переброс на основую страницу приложения
 @login_required
 def main_page(request):
-    return render(request, 'main_app/main.html')
+    return render(request, 'main_app/requests_list.html')
 
 
 # Выход пользователя
