@@ -1,20 +1,110 @@
+
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Главная страница</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-</head>
-<body>
-    <!-- Здесь располагается основной контент главной страницы -->
 
-    <!-- Форма для выхода -->
-    <form method="post" action="{% url 'logout' %}" style="text-align: right;">
-        {% csrf_token %}
-        <button type="submit" class="logout-button">Выйти</button>
+{% block content %}
+<h1>Список заявок</h1>
+
+<!-- Кнопка для открытия модального окна создания заявки -->
+<button id="createRequestBtn">Создать заявку</button>
+
+<!-- Таблица заявок -->
+<table>
+  <thead>
+    <tr>
+      <th>Статус</th>
+      <th>Номер заявки</th>
+      <th>Тип объекта</th>
+      <th>Название объекта</th>
+      <th>Пикеты</th>
+      <th>Дата съемки</th>
+      <th>Тип съемки</th>
+      <th>Примечание</th>
+      <th>Создатель</th>
+      <th>Изм.</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for request in requests %}
+    <tr>
+      <td>{{ request.status }}</td>
+      <td>{{ request.id }}</td>
+      <td>{{ request.object_type }}</td>
+      <td>{{ request.object_name }}</td>
+      <td>{{ request.piket_from }} - {{ request.piket_to }}</td>
+      <td>{{ request.shoot_date_from }} - {{ request.shoot_date_to }}</td>
+      <td>
+        {% if request.orthophoto %}Ортофотоплан{% endif %}
+        {% if request.laser %}Лазерное сканирование{% endif %}
+        {% if request.panorama %}Панорама{% endif %}
+        {% if request.overview %}Обзорные фото{% endif %}
+      </td>
+      <td>{{ request.note }}</td>
+      <td>{{ request.username }}</td>
+      <td>
+        {% if user.is_staff or user.id == request.user_id %}
+          <a href="{% url 'request_edit' request.id %}" class="editRequestBtn">Редактировать</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Модальное окно для создания заявки -->
+<div id="createRequestModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Создать заявку</h2>
+    <form id="createRequestForm" method="post" action="{% url 'request_create' %}">
+      {% csrf_token %}
+      <label for="id_object_type">Тип объекта:</label>
+      <select id="id_object_type" name="object_type">
+        <option value="">Выберите тип</option>
+        {% for obj_type in object_types %}
+          <option value="{{ obj_type.id }}">{{ obj_type.type_name }}</option>
+        {% endfor %}
+      </select>
+      <br>
+      <label for="id_object_name">Название объекта:</label>
+      <select id="id_object_name" name="object_name">
+        <option value="">Выберите название</option>
+        <!-- Значения будут подгружаться динамически -->
+      </select>
+      <br>
+      <!-- Остальные поля, например: -->
+      <label for="id_piket_from">Пикет от:</label>
+      <input type="number" id="id_piket_from" name="piket_from">
+      <br>
+      <label for="id_piket_to">Пикет до:</label>
+      <input type="number" id="id_piket_to" name="piket_to">
+      <br>
+      <label for="id_shoot_date_from">Дата съемки от:</label>
+      <input type="date" id="id_shoot_date_from" name="shoot_date_from">
+      <br>
+      <label for="id_shoot_date_to">Дата съемки до:</label>
+      <input type="date" id="id_shoot_date_to" name="shoot_date_to">
+      <br>
+      <!-- Флажки для типа съемки -->
+      <label><input type="checkbox" name="orthophoto" id="id_orthophoto"> Ортофотоплан</label>
+      <label><input type="checkbox" name="laser" id="id_laser"> Лазерное сканирование</label>
+      <label><input type="checkbox" name="panorama" id="id_panorama"> Панорама</label>
+      <label><input type="checkbox" name="overview" id="id_overview"> Обзорные фото</label>
+      <br>
+      <label for="id_note">Примечание:</label>
+      <textarea id="id_note" name="note"></textarea>
+      <br>
+      <button type="submit">Сохранить</button>
     </form>
+  </div>
+</div>
 
-    <!-- Остальной контент страницы -->
-</body>
-</html>
+<!-- Модальное окно для редактирования заявки можно реализовать аналогично -->
+<!-- ... -->
+
+<!-- Передаем URL для AJAX-запроса динамической загрузки объектов -->
+<script>
+  window.getObjectNamesUrl = "{% url 'get_object_names' %}";
+</script>
+<script src="{% static 'js/requests.js' %}"></script>
+{% endblock %}
