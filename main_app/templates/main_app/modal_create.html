@@ -1,5 +1,4 @@
 {% load static %}
-
 <!-- Модальное окно для создания заявки -->
 <div id="createRequestModal" class="modal" style="display: none;">
   <div class="modal-dialog">
@@ -13,6 +12,7 @@
       <div class="modal-body">
         <form id="createRequestForm" method="post" action="{% url 'request_create' %}">
           {% csrf_token %}
+          <!-- Поля формы -->
           <div class="form-group">
             <label for="id_object_type">Тип объекта:</label>
             <select id="id_object_type" name="object_type" class="form-control">

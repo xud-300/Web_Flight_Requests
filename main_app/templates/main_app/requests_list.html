@@ -3,8 +3,15 @@
 
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/requests_list.css' %}">
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/requests_list.css' %}">
+  <script>
+      window.getObjectNamesUrl = "{% url 'get_object_names' %}";
+  </script>
 {% endblock %}
+
+
+{% block title %}Список заявок{% endblock %}
 
 {% block content %}
 <div class="container my-4">

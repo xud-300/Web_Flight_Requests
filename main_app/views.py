@@ -25,6 +25,14 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
         else:
             return FlightRequest.objects.filter(user_id=self.request.user.id).order_by('-created_at')
 
+    def get_context_data(self, **kwargs):
+        # Получаем базовый контекст
+        context = super().get_context_data(**kwargs)
+        # Добавляем в контекст список типов объектов из модели ObjectType
+        from .models import ObjectType  # или, если ObjectType уже импортирована, не нужно импортировать заново
+        context['object_types'] = ObjectType.objects.all()
+        return context
+
 
 # Создание заявки через модальное окно.
 class FlightRequestCreateView(LoginRequiredMixin, CreateView):
@@ -37,7 +45,18 @@ class FlightRequestCreateView(LoginRequiredMixin, CreateView):
         # Устанавливаем текущего пользователя как создателя заявки.
         form.instance.user_id = self.request.user.id
         form.instance.username = self.request.user.username
-        return super().form_valid(form)
+        self.object = form.save()
+        # Используем проверку заголовка, так как request.is_ajax() больше не поддерживается
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
+        else:
+            return super().form_valid(form)
+
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'errors': form.errors})
+        else:
+            return super().form_invalid(form)
 
 
 # Редактирование заявки через модальное окно.
