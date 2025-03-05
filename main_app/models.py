@@ -1,4 +1,3 @@
-# flight_requests/models.py
 from django.db import models
 
 class ObjectType(models.Model):
@@ -42,11 +41,26 @@ class User(models.Model):
 
     def __str__(self):
         return self.username or str(self.telegram_id)
+    
+class TelegramUser(models.Model):
+    id = models.AutoField(primary_key=True)
+    telegram_id = models.BigIntegerField(unique=True)
+    username = models.TextField(null=True, blank=True)
+    full_name = models.TextField(null=True, blank=True)
+    approved = models.BooleanField(default=False)
+    registration_date = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        db_table = 'users'
+        managed = False  # Существующая таблица; Django не будет её изменять
+
+    def __str__(self):
+        return self.username or str(self.telegram_id)
+    
 class FlightRequest(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
-        User,
+        TelegramUser,
         on_delete=models.CASCADE,
         db_column='user_id'
     )

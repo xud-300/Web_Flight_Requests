@@ -7,8 +7,8 @@ from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django import forms
-
-from .models import FlightRequest, RequestHistory, Object, ObjectType
+from django.template.loader import render_to_string
+from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser
 from .forms import FlightRequestCreateForm, FlightRequestEditForm
 
 
@@ -39,14 +39,24 @@ class FlightRequestCreateView(LoginRequiredMixin, CreateView):
     model = FlightRequest
     form_class = FlightRequestCreateForm
     template_name = 'modal_create.html'
-    success_url = reverse_lazy('requests_list')  # Имя маршрута для списка заявок
+    success_url = reverse_lazy('requests_list')
 
     def form_valid(self, form):
-        # Устанавливаем текущего пользователя как создателя заявки.
-        form.instance.user_id = self.request.user.id
+        # Попытка получить объект пользователя из таблицы users через модель TelegramUser
+        try:
+            user_obj = TelegramUser.objects.get(id=self.request.user.id)
+        except TelegramUser.DoesNotExist:
+            # Если запись не найдена, создаём её с минимальными данными
+            user_obj = TelegramUser.objects.create(
+                id=self.request.user.id,
+                telegram_id=getattr(self.request.user, 'telegram_id', 0),
+                username=self.request.user.username or '',
+                full_name=getattr(self.request.user, 'full_name', '')
+            )
+        # Привязываем заявку к найденному или созданному пользователю
+        form.instance.user = user_obj
         form.instance.username = self.request.user.username
         self.object = form.save()
-        # Используем проверку заголовка, так как request.is_ajax() больше не поддерживается
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
         else:
@@ -63,33 +73,47 @@ class FlightRequestCreateView(LoginRequiredMixin, CreateView):
 class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
     model = FlightRequest
     form_class = FlightRequestEditForm
-    template_name = 'modal_edit.html'
+    template_name = 'main_app/modal_edit.html'
     success_url = reverse_lazy('requests_list')
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
-        # Обычный пользователь может редактировать только свои заявки.
         if not request.user.is_staff and self.object.user_id != request.user.id:
             return HttpResponseForbidden("У вас нет прав для редактирования этой заявки.")
         return super().dispatch(request, *args, **kwargs)
 
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        context = self.get_context_data(object=self.object, form=self.get_form())
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('ajax'):
+            html = render_to_string("main_app/modal_edit.html", {**context, 'ajax': True}, request=request)
+            return HttpResponse(html)
+        return super().get(request, *args, **kwargs)
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        # Если редактирует администратор, добавляем поле status динамически.
         if self.request.user.is_staff:
             form.fields['status'] = forms.CharField(initial=self.object.status)
         return form
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        # Сохраняем историю изменений: фиксируем какие поля были изменены.
         changes = "Изменены поля: " + ", ".join(form.changed_data)
         RequestHistory.objects.create(
             flight_request=self.object,
             changed_by=self.request.user,
             changes=changes,
         )
-        return response
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
+        else:
+            return response
+
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'errors': form.errors})
+        else:
+            return super().form_invalid(form)
 
 
 # AJAX-обработчик для динамической загрузки названий объектов по выбранному типу.

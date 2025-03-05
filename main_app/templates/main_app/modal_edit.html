@@ -1,28 +1,40 @@
 {% load static %}
-<!-- Модальное окно для редактирования заявки -->
-<div id="editRequestModal" class="modal" style="display: none;">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Редактировать заявку</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="editRequestForm" method="post" action="">
-          {% csrf_token %}
-          <div id="editRequestFormFields">
-            <!-- Поля формы редактирования будут загружены через AJAX -->
-          </div>
-          <button type="submit" class="btn btn-primary">Сохранить изменения</button>
-        </form>
+{% if ajax %}
+    {# Если передан флаг ajax, возвращаем только содержимое формы редактирования и истории изменений #}
+    <form id="editRequestForm" method="post" action="">
+        {% csrf_token %}
+        <div id="editRequestFormFields">
+            {{ form.as_p }}
+        </div>
+        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
         <hr>
         <h6>История изменений</h6>
         <div id="requestHistory">
-          <!-- Здесь будет история изменений заявки -->
+            {% for record in object.history.all %}
+                <p><strong>{{ record.changed_by }}</strong>: {{ record.changes }} <em>({{ record.timestamp|date:"d.m.Y H:i" }})</em></p>
+            {% empty %}
+                <p>Нет истории изменений.</p>
+            {% endfor %}
         </div>
-      </div>
+    </form>
+{% else %}
+    {# Полная обёртка модального окна для вставки в основную страницу #}
+    <div id="editRequestModal" class="modal" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Редактировать заявку</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="editRequestFormContainer">
+                        {# Внутри этого контейнера мы вставим содержимое формы через AJAX #}
+                        {% include "main_app/modal_edit.html" with ajax=True %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
+{% endif %}
