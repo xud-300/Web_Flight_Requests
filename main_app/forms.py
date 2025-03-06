@@ -58,8 +58,6 @@ class FlightRequestCreateForm(forms.ModelForm):
 class FlightRequestEditForm(forms.ModelForm):
     class Meta:
         model = FlightRequest
-        # Для редактирования мы исключаем поле status для обычных пользователей.
-        # Если редактирует администратор, его можно добавить динамически в представлении.
         fields = [
             'object_type',
             'object_name',
@@ -74,6 +72,15 @@ class FlightRequestEditForm(forms.ModelForm):
             'note',
         ]
         widgets = {
-            'shoot_date_from': forms.DateInput(attrs={'type': 'date'}),
-            'shoot_date_to': forms.DateInput(attrs={'type': 'date'}),
+            'object_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_edit_object_type'}),
+            'object_name': forms.Select(attrs={'class': 'form-control', 'id': 'id_edit_object_name'}),
+            'piket_from': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_edit_piket_from'}),
+            'piket_to': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_edit_piket_to'}),
+            'shoot_date_from': forms.DateInput(attrs={'type': 'date', 'class': 'form-control', 'id': 'id_edit_shoot_date_from'}),
+            'shoot_date_to': forms.DateInput(attrs={'type': 'date', 'class': 'form-control', 'id': 'id_edit_shoot_date_to'}),
+            'orthophoto': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_edit_orthophoto'}),
+            'laser': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_edit_laser'}),
+            'panorama': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_edit_panorama'}),
+            'overview': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_edit_overview'}),
+            'note': forms.Textarea(attrs={'class': 'form-control', 'id': 'id_edit_note', 'rows': 3}),
         }

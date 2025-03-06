@@ -1,4 +1,122 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() { 
+    // Функция для динамической подгрузки названий объектов (аналогично modal_create.js)
+    function attachDynamicListeners() {
+        const objectTypeSelect = document.getElementById('id_object_type');
+        const objectNameSelect = document.getElementById('id_object_name');
+        const piketFrom = document.getElementById('id_piket_from');
+        const piketTo = document.getElementById('id_piket_to');
+
+        if (objectTypeSelect) {
+            objectTypeSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                console.log("Выбран тип объекта:", selectedValue);
+
+                if (!selectedValue) {
+                    objectNameSelect.disabled = false;
+                    objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+                    if (piketFrom) piketFrom.disabled = false;
+                    if (piketTo) piketTo.disabled = false;
+                    return;
+                }
+
+                // Если выбран тип "ЖД" (например, id == "2")
+                if (selectedValue === "2") {
+                    objectNameSelect.disabled = true;
+                    objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
+                } else {
+                    objectNameSelect.disabled = false;
+                    if (!window.getObjectNamesUrl) {
+                        console.error("window.getObjectNamesUrl не определена!");
+                        return;
+                    }
+                    const url = window.getObjectNamesUrl + '?object_type=' + selectedValue;
+                    console.log("Отправка запроса по URL:", url);
+                    fetch(url)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Ошибка при запросе данных');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log("Получены данные:", data);
+                            objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+                            data.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.id;
+                                option.textContent = item.object_name;
+                                objectNameSelect.appendChild(option);
+                            });
+                        })
+                        .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
+                }
+
+                // Если выбран тип "Городок" (например, id == "4"), отключаем поля пикетов
+                if (selectedValue === "4") {
+                    if (piketFrom) piketFrom.disabled = true;
+                    if (piketTo) piketTo.disabled = true;
+                } else {
+                    if (piketFrom) piketFrom.disabled = false;
+                    if (piketTo) piketTo.disabled = false;
+                }
+            });
+        }
+    }
+
+    // Функция для обработки отправки формы редактирования
+    function attachEditFormSubmitHandler() {
+        const editRequestForm = document.getElementById('editRequestForm');
+        if (editRequestForm) {
+            // Выводим в консоль значение атрибута action, чтобы убедиться, что оно корректно
+            console.log("Action attribute before submission:", editRequestForm.action);
+            editRequestForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(editRequestForm);
+                fetch(editRequestForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Ошибка при отправке данных формы");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Заявка обновлена',
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            const editModal = document.getElementById('editRequestModal');
+                            if (editModal) editModal.style.display = 'none';
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка обновления заявки',
+                            text: JSON.stringify(data.errors)
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Ошибка при отправке формы редактирования:", error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Ошибка',
+                        text: 'Произошла ошибка при отправке запроса.'
+                    });
+                });
+            });
+        }
+    }
+
     // Обработчик для всех кнопок редактирования заявки
     const editButtons = document.querySelectorAll('.editRequestBtn');
     editButtons.forEach(function(button) {
@@ -23,6 +141,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const formContainer = document.getElementById('editRequestFormContainer');
                 if (formContainer) {
                     formContainer.innerHTML = html;
+                    // Прикрепляем обработчики динамической подгрузки и отправки формы
+                    attachDynamicListeners();
+                    attachEditFormSubmitHandler();
                 } else {
                     console.error("Контейнер editRequestFormContainer не найден");
                 }

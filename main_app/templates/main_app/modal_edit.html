@@ -1,40 +1,102 @@
 {% load static %}
 {% if ajax %}
-    {# Если передан флаг ajax, возвращаем только содержимое формы редактирования и истории изменений #}
-    <form id="editRequestForm" method="post" action="">
-        {% csrf_token %}
-        <div id="editRequestFormFields">
-            {{ form.as_p }}
-        </div>
-        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
-        <hr>
-        <h6>История изменений</h6>
-        <div id="requestHistory">
-            {% for record in object.history.all %}
-                <p><strong>{{ record.changed_by }}</strong>: {{ record.changes }} <em>({{ record.timestamp|date:"d.m.Y H:i" }})</em></p>
-            {% empty %}
-                <p>Нет истории изменений.</p>
-            {% endfor %}
-        </div>
-    </form>
-{% else %}
-    {# Полная обёртка модального окна для вставки в основную страницу #}
-    <div id="editRequestModal" class="modal" style="display: none;">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Редактировать заявку</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div id="editRequestFormContainer">
-                        {# Внутри этого контейнера мы вставим содержимое формы через AJAX #}
-                        {% include "main_app/modal_edit.html" with ajax=True %}
-                    </div>
-                </div>
-            </div>
-        </div>
+  <form id="editRequestForm" method="post" action="{{ edit_url }}">
+    {% csrf_token %}
+    <!-- Поля редактирования заявки -->
+    <div class="form-group">
+      <label for="id_object_type">Тип объекта:</label>
+      <select id="id_object_type" name="object_type" class="form-control">
+        <option value="">Выберите тип</option>
+        {% for obj_type in object_types %}
+          <option value="{{ obj_type.id }}" {% if object.object_type.id == obj_type.id %}selected{% endif %}>
+            {{ obj_type.type_name }}
+          </option>
+        {% endfor %}
+      </select>
     </div>
+    <div class="form-group">
+      <label for="id_object_name">Название объекта:</label>
+      <select id="id_object_name" name="object_name" class="form-control">
+        <option value="">Выберите название</option>
+        {% for obj in object_names %}
+          <option value="{{ obj.id }}" {% if object.object_name.id == obj.id %}selected{% endif %}>
+            {{ obj.object_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="id_piket_from">Пикет от:</label>
+      <input type="number" id="id_piket_from" name="piket_from" class="form-control" value="{{ object.piket_from }}">
+    </div>
+    <div class="form-group">
+      <label for="id_piket_to">Пикет до:</label>
+      <input type="number" id="id_piket_to" name="piket_to" class="form-control" value="{{ object.piket_to }}">
+    </div>
+    <div class="form-group">
+      <label for="id_shoot_date_from">Дата съемки от:</label>
+      <input type="date" id="id_shoot_date_from" name="shoot_date_from" class="form-control" value="{{ object.shoot_date_from|date:'Y-m-d' }}">
+    </div>
+    <div class="form-group">
+      <label for="id_shoot_date_to">Дата съемки до:</label>
+      <input type="date" id="id_shoot_date_to" name="shoot_date_to" class="form-control" value="{{ object.shoot_date_to|date:'Y-m-d' }}">
+    </div>
+    <div class="form-group">
+      <label>Тип съемки:</label><br>
+      <div class="form-check form-check-inline">
+        <input type="checkbox" id="id_orthophoto" name="orthophoto" class="form-check-input" {% if object.orthophoto %}checked{% endif %}>
+        <label class="form-check-label" for="id_orthophoto">Ортофотоплан</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input type="checkbox" id="id_laser" name="laser" class="form-check-input" {% if object.laser %}checked{% endif %}>
+        <label class="form-check-label" for="id_laser">Лазерное сканирование</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input type="checkbox" id="id_panorama" name="panorama" class="form-check-input" {% if object.panorama %}checked{% endif %}>
+        <label class="form-check-label" for="id_panorama">Панорама</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input type="checkbox" id="id_overview" name="overview" class="form-check-input" {% if object.overview %}checked{% endif %}>
+        <label class="form-check-label" for="id_overview">Обзорные фото</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="id_note">Примечание:</label>
+      <textarea id="id_note" name="note" class="form-control">{{ object.note }}</textarea>
+    </div>
+    {% if form.fields.status %}
+    <div class="form-group">
+      <label for="id_status">Статус заявки:</label>
+      <input type="text" id="id_status" name="status" class="form-control" value="{{ object.status }}">
+    </div>
+    {% endif %}
+    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+  </form>
+  <hr>
+  <h6>История изменений</h6>
+  <div id="requestHistory">
+    {% for record in object.history.all %}
+      <p><strong>{{ record.changed_by }}</strong>: {{ record.changes }} <em>({{ record.timestamp|date:"d.m.Y H:i" }})</em></p>
+    {% empty %}
+      <p>Нет истории изменений.</p>
+    {% endfor %}
+  </div>
+{% else %}
+  <div id="editRequestModal" class="modal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Редактировать заявку</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="editRequestFormContainer">
+            {% include "main_app/modal_edit.html" with ajax=True %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 {% endif %}

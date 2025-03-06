@@ -1,5 +1,4 @@
 # main_app/views.py
-
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
@@ -8,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django import forms
 from django.template.loader import render_to_string
-from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser
+from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser, User
 from .forms import FlightRequestCreateForm, FlightRequestEditForm
 
 
@@ -82,6 +81,13 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
             return HttpResponseForbidden("У вас нет прав для редактирования этой заявки.")
         return super().dispatch(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['object_types'] = ObjectType.objects.all()
+        context['object_names'] = Object.objects.filter(object_type=self.object.object_type)
+        context['edit_url'] = reverse_lazy('request_edit', args=[self.object.id])
+        return context
+
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         context = self.get_context_data(object=self.object, form=self.get_form())
@@ -99,9 +105,14 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         response = super().form_valid(form)
         changes = "Изменены поля: " + ", ".join(form.changed_data)
+        try:
+            # Получаем экземпляр модели User, соответствующий текущему пользователю.
+            changed_by_instance = User.objects.get(id=self.request.user.id)
+        except User.DoesNotExist:
+            changed_by_instance = None
         RequestHistory.objects.create(
             flight_request=self.object,
-            changed_by=self.request.user,
+            changed_by=changed_by_instance,
             changes=changes,
         )
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -114,6 +125,8 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
             return JsonResponse({'success': False, 'errors': form.errors})
         else:
             return super().form_invalid(form)
+
+
 
 
 # AJAX-обработчик для динамической загрузки названий объектов по выбранному типу.
