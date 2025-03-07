@@ -84,3 +84,12 @@ class FlightRequestEditForm(forms.ModelForm):
             'overview': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_edit_overview'}),
             'note': forms.Textarea(attrs={'class': 'form-control', 'id': 'id_edit_note', 'rows': 3}),
         }
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Если поле 'status' присутствует в очищенных данных (т.е. для администратора), устанавливаем его значение
+        if 'status' in self.cleaned_data:
+            instance.status = self.cleaned_data['status']
+        if commit:
+            instance.save()
+        return instance

@@ -7,7 +7,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django import forms
 from django.template.loader import render_to_string
-from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser, User
+from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser
+from main_app.models import User
 from .forms import FlightRequestCreateForm, FlightRequestEditForm
 
 
@@ -19,16 +20,12 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
     context_object_name = 'requests'
 
     def get_queryset(self):
-        if self.request.user.is_staff:
-            return FlightRequest.objects.all().order_by('-created_at')
-        else:
-            return FlightRequest.objects.filter(user_id=self.request.user.id).order_by('-created_at')
+        # Возвращаем все заявки для всех пользователей
+        return FlightRequest.objects.all().order_by('-created_at')
 
     def get_context_data(self, **kwargs):
-        # Получаем базовый контекст
         context = super().get_context_data(**kwargs)
-        # Добавляем в контекст список типов объектов из модели ObjectType
-        from .models import ObjectType  # или, если ObjectType уже импортирована, не нужно импортировать заново
+        from .models import ObjectType
         context['object_types'] = ObjectType.objects.all()
         return context
 
@@ -77,8 +74,11 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if not request.user.is_staff and self.object.user_id != request.user.id:
-            return HttpResponseForbidden("У вас нет прав для редактирования этой заявки.")
+        # Проверяем, является ли пользователь администратором через is_staff или через профиль
+        if not (request.user.is_staff or (hasattr(request.user, 'profile') and request.user.profile.role == 'admin')):
+            # Если пользователь не администратор, то он может редактировать только свою заявку
+            if self.object.user_id != request.user.id:
+                return HttpResponseForbidden("У вас нет прав для редактирования этой заявки.")
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -98,7 +98,8 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        if self.request.user.is_staff:
+        # Добавляем поле 'status' только для администраторов (через is_staff или профиль)
+        if self.request.user.is_staff or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin'):
             form.fields['status'] = forms.CharField(initial=self.object.status)
         return form
 

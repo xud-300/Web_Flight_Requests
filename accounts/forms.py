@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User as AuthUser
 from captcha.fields import ReCaptchaField  # Импорт капчи
 from .models import Profile
 
@@ -29,7 +29,7 @@ class UserRegistrationForm(UserCreationForm):
 
 
     class Meta: 
-        model = User  # Указываем, что форма связана с моделью User
+        model = AuthUser  # Указываем, что форма связана с моделью User
         fields = ['username', 'password1', 'password2', 'full_name']  # Определяем, какие поля модели будут отображаться в форме
         labels = {
             'username': 'Имя пользователя',  # Метка для поля "username"

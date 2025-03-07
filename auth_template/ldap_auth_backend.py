@@ -1,7 +1,7 @@
 from django.contrib.auth.backends import BaseBackend
 from ldap3 import Server, Connection, ALL, SUBTREE
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User as AuthUser
 from accounts.models import Profile  # Импортируем модель Profile
 
 class LDAPBackend(BaseBackend):
@@ -40,10 +40,10 @@ class LDAPBackend(BaseBackend):
 
                     # Получаем или создаем пользователя в Django
                     try:
-                        user = User.objects.get(username=username)
-                    except User.DoesNotExist:
-                        user = User(username=username)
-                        user.set_unusable_password()  # Устанавливаем неиспользуемый пароль, т.к. мы не храним пароль в базе данных
+                        user = AuthUser.objects.get(username=username)
+                    except AuthUser.DoesNotExist:
+                        user = AuthUser(username=username)
+                        user.set_unusable_password()
                         user.save()
 
                     # Получаем или создаем профиль пользователя
@@ -63,6 +63,6 @@ class LDAPBackend(BaseBackend):
     def get_user(self, user_id):
         # Получаем пользователя по его ID
         try:
-            return User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+            return AuthUser.objects.get(pk=user_id)
+        except AuthUser.DoesNotExist:
             return None

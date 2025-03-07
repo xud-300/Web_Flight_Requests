@@ -1,3 +1,5 @@
+// static/js/modal_edit.js
+
 document.addEventListener('DOMContentLoaded', function() { 
     // Функция для динамической подгрузки названий объектов (аналогично modal_create.js)
     function attachDynamicListeners() {
@@ -131,6 +133,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .then(response => {
+                if (response.status === 403) {
+                    throw new Error("У вас нет прав для редактирования этой заявки.");
+                }
                 if (!response.ok) {
                     throw new Error("Ошибка загрузки данных для редактирования");
                 }
@@ -155,6 +160,11 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error("Ошибка при загрузке данных для редактирования:", error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ошибка',
+                    text: error.message
+                });
             });
         });
     });

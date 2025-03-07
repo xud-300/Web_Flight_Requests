@@ -7,7 +7,8 @@ from django.urls import reverse
 from django.core.cache import cache
 from .forms import UserRegistrationForm, CustomAuthenticationForm
 from .models import Profile
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User as AuthUser
+
 
 # Регистрация нового пользователя
 def register(request):
@@ -15,7 +16,7 @@ def register(request):
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
             # Проверка на существование пользователя с таким же именем
-            if User.objects.filter(username=form.cleaned_data['username']).exists():
+            if AuthUser.objects.filter(username=form.cleaned_data['username']).exists():
                 return JsonResponse({'errors': {'username': ['Пользователь с таким именем уже существует.']}})
             
             user = form.save(commit=False)
