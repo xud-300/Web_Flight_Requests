@@ -1,27 +1,35 @@
-// static/js/modal_edit.js
-
 document.addEventListener('DOMContentLoaded', function() { 
-    // Функция для динамической подгрузки названий объектов (аналогично modal_create.js)
+    // Функция для динамической подгрузки названий объектов
     function attachDynamicListeners() {
-        const objectTypeSelect = document.getElementById('id_object_type');
-        const objectNameSelect = document.getElementById('id_object_name');
-        const piketFrom = document.getElementById('id_piket_from');
-        const piketTo = document.getElementById('id_piket_to');
+        const objectTypeSelect = document.getElementById('id_edit_object_type');
+        const objectNameSelect = document.getElementById('id_edit_object_name');
+        const piketFrom = document.getElementById('id_edit_piket_from');
+        const piketTo = document.getElementById('id_edit_piket_to');
 
         if (objectTypeSelect) {
             objectTypeSelect.addEventListener('change', function() {
                 const selectedValue = this.value;
-                console.log("Выбран тип объекта:", selectedValue);
+                console.log("Изменение типа объекта в edit modal, новое значение:", selectedValue);
 
+                // Очистка выбранного значения и опций для Названия объекта
+                objectNameSelect.value = "";
+                objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+
+                // Если тип не выбран – активируем все поля и выходим
                 if (!selectedValue) {
                     objectNameSelect.disabled = false;
-                    objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-                    if (piketFrom) piketFrom.disabled = false;
-                    if (piketTo) piketTo.disabled = false;
+                    if (piketFrom) {
+                        piketFrom.disabled = false;
+                        piketFrom.value = "";
+                    }
+                    if (piketTo) {
+                        piketTo.disabled = false;
+                        piketTo.value = "";
+                    }
                     return;
                 }
 
-                // Если выбран тип "ЖД" (например, id == "2")
+                // Если выбран тип "ЖД" (например, id === "2")
                 if (selectedValue === "2") {
                     objectNameSelect.disabled = true;
                     objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
@@ -53,13 +61,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
                 }
 
-                // Если выбран тип "Городок" (например, id == "4"), отключаем поля пикетов
+                // Если выбран тип "Городок" (например, id === "4"), очищаем и отключаем поля пикетов
                 if (selectedValue === "4") {
-                    if (piketFrom) piketFrom.disabled = true;
-                    if (piketTo) piketTo.disabled = true;
+                    if (piketFrom) {
+                        piketFrom.value = "";
+                        piketFrom.disabled = true;
+                    }
+                    if (piketTo) {
+                        piketTo.value = "";
+                        piketTo.disabled = true;
+                    }
                 } else {
-                    if (piketFrom) piketFrom.disabled = false;
-                    if (piketTo) piketTo.disabled = false;
+                    if (piketFrom) {
+                        piketFrom.disabled = false;
+                    }
+                    if (piketTo) {
+                        piketTo.disabled = false;
+                    }
                 }
             });
         }
@@ -69,7 +87,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function attachEditFormSubmitHandler() {
         const editRequestForm = document.getElementById('editRequestForm');
         if (editRequestForm) {
-            // Выводим в консоль значение атрибута action, чтобы убедиться, что оно корректно
             console.log("Action attribute before submission:", editRequestForm.action);
             editRequestForm.addEventListener('submit', function(event) {
                 event.preventDefault();
@@ -124,7 +141,6 @@ document.addEventListener('DOMContentLoaded', function() {
     editButtons.forEach(function(button) {
         button.addEventListener('click', function() {
             const requestId = this.getAttribute('data-request-id');
-            // Формируем URL для запроса с параметром ajax=1
             const url = `/main_app/requests/edit/${requestId}/?ajax=1`;
             console.log("Запрос редактирования по URL:", url);
             fetch(url, {
@@ -142,17 +158,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.text();
             })
             .then(html => {
-                // Вставляем полученный HTML в контейнер с id "editRequestFormContainer"
                 const formContainer = document.getElementById('editRequestFormContainer');
                 if (formContainer) {
                     formContainer.innerHTML = html;
-                    // Прикрепляем обработчики динамической подгрузки и отправки формы
                     attachDynamicListeners();
                     attachEditFormSubmitHandler();
                 } else {
                     console.error("Контейнер editRequestFormContainer не найден");
                 }
-                // Открываем модальное окно
                 const editModal = document.getElementById('editRequestModal');
                 if (editModal) {
                     editModal.style.display = 'block';
