@@ -75,6 +75,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Функция для обновления ошибок формы: удаляет старые сообщения, добавляет класс is-invalid и вставляет новые сообщения
+    function updateFormErrors(form, errors) {
+        // Убираем предыдущие сообщения об ошибках
+        const errorElements = form.querySelectorAll('.invalid-feedback');
+        errorElements.forEach(el => el.remove());
+        // Убираем класс is-invalid со всех полей
+        const invalidFields = form.querySelectorAll('.is-invalid');
+        invalidFields.forEach(el => el.classList.remove('is-invalid'));
+
+        // Для каждого поля с ошибками
+        for (let fieldName in errors) {
+            const field = form.querySelector('[name="' + fieldName + '"]');
+            if (field) {
+                field.classList.add('is-invalid');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.innerHTML = errors[fieldName].join('<br>');
+                field.parentNode.appendChild(errorDiv);
+            }
+        }
+    }
+
     // Обработка отправки формы создания заявки через AJAX
     const createRequestForm = document.getElementById('createRequestForm');
     if (createRequestForm) {
@@ -105,12 +127,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         location.reload();
                     });
                 } else {
-                    // Если есть ошибки, показываем их
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Ошибка создания заявки',
-                        text: JSON.stringify(data.errors)
-                    });
+                    // Обновляем форму: подсвечиваем поля с ошибками и выводим сообщения под ними
+                    updateFormErrors(createRequestForm, data.errors);
                 }
             })
             .catch(error => {
@@ -124,3 +142,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
