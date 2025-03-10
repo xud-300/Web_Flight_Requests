@@ -100,7 +100,11 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
         form = super().get_form(form_class)
         # Добавляем поле 'status' только для администраторов (через is_staff или профиль)
         if self.request.user.is_staff or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin'):
-            form.fields['status'] = forms.CharField(initial=self.object.status)
+            form.fields['status'] = forms.ChoiceField(
+                choices=[('новая', 'Новая'), ('завершена', 'Завершена')],
+                initial=self.object.status,
+                widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_edit_status'})
+            )
         return form
 
     def form_valid(self, form):

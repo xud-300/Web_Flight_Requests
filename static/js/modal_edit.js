@@ -83,6 +83,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function updateFormErrors(form, errors) {
+        // Убираем предыдущие ошибки
+        const errorElements = form.querySelectorAll('.invalid-feedback');
+        errorElements.forEach(el => el.remove());
+        const invalidFields = form.querySelectorAll('.is-invalid');
+        invalidFields.forEach(el => el.classList.remove('is-invalid'));
+    
+        // Для каждого поля с ошибками
+        for (let fieldName in errors) {
+            // Находим поле по имени
+            const field = form.querySelector('[name="' + fieldName + '"]');
+            if (field) {
+                field.classList.add('is-invalid');
+                // Создаем контейнер для ошибки
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.innerHTML = errors[fieldName].join('<br>');
+                // Вставляем контейнер сразу после поля
+                if (field.parentNode) {
+                    // Если родитель - элемент формы, добавляем после самого поля
+                    field.parentNode.appendChild(errorDiv);
+                }
+            }
+        }
+    }
+    
+
+
     // Функция для обработки отправки формы редактирования
     function attachEditFormSubmitHandler() {
         const editRequestForm = document.getElementById('editRequestForm');
@@ -117,11 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             location.reload();
                         });
                     } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Ошибка обновления заявки',
-                            text: JSON.stringify(data.errors)
-                        });
+                        updateFormErrors(editRequestForm, data.errors);
                     }
                 })
                 .catch(error => {
@@ -135,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+    
 
     // Обработчик для всех кнопок редактирования заявки
     const editButtons = document.querySelectorAll('.editRequestBtn');

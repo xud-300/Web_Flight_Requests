@@ -67,9 +67,13 @@
     {% if form.fields.status %}
     <div class="form-group">
       <label for="id_edit_status">Статус заявки:</label>
-      <input type="text" id="id_edit_status" name="status" class="form-control" value="{{ object.status }}">
+      <select id="id_edit_status" name="status" class="form-control">
+        <option value="новая" {% if object.status == 'новая' %}selected{% endif %}>Новая</option>
+        <option value="завершена" {% if object.status == 'завершена' %}selected{% endif %}>Завершена</option>
+      </select>
     </div>
     {% endif %}
+   
     <button type="submit" class="btn btn-primary">Сохранить изменения</button>
   </form>
   <hr>
