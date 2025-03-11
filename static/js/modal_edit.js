@@ -5,36 +5,39 @@ document.addEventListener('DOMContentLoaded', function() {
         const objectNameSelect = document.getElementById('id_edit_object_name');
         const piketFrom = document.getElementById('id_edit_piket_from');
         const piketTo = document.getElementById('id_edit_piket_to');
-
+    
         if (objectTypeSelect) {
             objectTypeSelect.addEventListener('change', function() {
                 const selectedValue = this.value;
                 console.log("Изменение типа объекта в edit modal, новое значение:", selectedValue);
-
-                // Очистка выбранного значения и опций для Названия объекта
-                objectNameSelect.value = "";
-                objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-
-                // Если тип не выбран – активируем все поля и выходим
+    
+                // Если тип не выбран – активируем все поля и очищаем
                 if (!selectedValue) {
                     objectNameSelect.disabled = false;
-                    if (piketFrom) {
-                        piketFrom.disabled = false;
+                    objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+                    if (piketFrom) { 
+                        piketFrom.disabled = false; 
                         piketFrom.value = "";
                     }
-                    if (piketTo) {
-                        piketTo.disabled = false;
+                    if (piketTo) { 
+                        piketTo.disabled = false; 
                         piketTo.value = "";
                     }
                     return;
                 }
-
-                // Если выбран тип "ЖД" (например, id === "2")
+    
                 if (selectedValue === "2") {
+                    // Если выбран тип "ЖД" – очищаем и отключаем поле названия объекта
                     objectNameSelect.disabled = true;
                     objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
-                } else {
+                } else if (selectedValue === "4") {
+                    // Если выбран тип "Городок" – оставляем поле названия объекта без изменений
                     objectNameSelect.disabled = false;
+                    // Не очищаем список – предполагается, что сервер уже отрендерил корректные опции.
+                } else {
+                    // Для остальных типов – очищаем и подгружаем новые варианты
+                    objectNameSelect.disabled = false;
+                    objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
                     if (!window.getObjectNamesUrl) {
                         console.error("window.getObjectNamesUrl не определена!");
                         return;
@@ -60,8 +63,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         })
                         .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
                 }
-
-                // Если выбран тип "Городок" (например, id === "4"), очищаем и отключаем поля пикетов
+    
+                // Для полей пикетов: если выбран тип "Городок", отключаем их, иначе включаем
                 if (selectedValue === "4") {
                     if (piketFrom) {
                         piketFrom.value = "";
@@ -82,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+    
 
     function updateFormErrors(form, errors) {
         // Убираем предыдущие ошибки
@@ -188,6 +192,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     formContainer.innerHTML = html;
                     attachDynamicListeners();
                     attachEditFormSubmitHandler();
+                    // Читаем исходное значение типа объекта из data-атрибута
+                    const objectTypeSelect = document.getElementById('id_edit_object_type');
+                    if (objectTypeSelect) {
+                        const initialType = objectTypeSelect.dataset.initialType;
+                        console.log("Initial type from dataset: ", initialType);
+                        // Если исходный тип соответствует "ЖД" (например, "2") или "Городок" ("4"), инициируем обработку
+                        if (initialType === "2" || initialType === "4") {
+                            objectTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
                 } else {
                     console.error("Контейнер editRequestFormContainer не найден");
                 }
@@ -196,6 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     editModal.style.display = 'block';
                 }
             })
+            
             .catch(error => {
                 console.error("Ошибка при загрузке данных для редактирования:", error);
                 Swal.fire({

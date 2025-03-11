@@ -1,4 +1,5 @@
 # main_app/views.py
+import json
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
@@ -38,25 +39,36 @@ class FlightRequestCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('requests_list')
 
     def form_valid(self, form):
-        # Попытка получить объект пользователя из таблицы users через модель TelegramUser
+        # Попытка получить объект пользователя через TelegramUser
         try:
             user_obj = TelegramUser.objects.get(id=self.request.user.id)
         except TelegramUser.DoesNotExist:
-            # Если запись не найдена, создаём её с минимальными данными
             user_obj = TelegramUser.objects.create(
                 id=self.request.user.id,
                 telegram_id=getattr(self.request.user, 'telegram_id', 0),
                 username=self.request.user.username or '',
                 full_name=getattr(self.request.user, 'full_name', '')
             )
-        # Привязываем заявку к найденному или созданному пользователю
         form.instance.user = user_obj
         form.instance.username = self.request.user.username
         self.object = form.save()
+
+        try:
+            changed_by_instance = User.objects.get(id=self.request.user.id)
+        except User.DoesNotExist:
+            changed_by_instance = None
+
+        RequestHistory.objects.create(
+            flight_request=self.object,
+            changed_by=changed_by_instance,
+            changes=json.dumps({"created": ["", "Заявка создана"]}, ensure_ascii=False)
+        )
+
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
         else:
             return super().form_valid(form)
+
 
     def form_invalid(self, form):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -109,21 +121,34 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        changes = "Изменены поля: " + ", ".join(form.changed_data)
+        
+        # Формируем словарь изменений.
+        # Используем form.changed_data для списка изменённых полей.
+        changes_dict = {}
+        for field in form.changed_data:
+            # Получаем старое значение из form.initial
+            old_value = form.initial.get(field)
+            # Получаем новое значение из form.cleaned_data
+            new_value = form.cleaned_data.get(field)
+            # Приводим к строковому представлению для удобства (можно доработать по необходимости)
+            changes_dict[field] = [str(old_value), str(new_value)]
+        
         try:
-            # Получаем экземпляр модели User, соответствующий текущему пользователю.
             changed_by_instance = User.objects.get(id=self.request.user.id)
         except User.DoesNotExist:
             changed_by_instance = None
+
         RequestHistory.objects.create(
             flight_request=self.object,
             changed_by=changed_by_instance,
-            changes=changes,
+            changes=json.dumps(changes_dict, ensure_ascii=False)  # Сохраняем изменения в JSON
         )
+        
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
         else:
             return response
+
 
     def form_invalid(self, form):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':

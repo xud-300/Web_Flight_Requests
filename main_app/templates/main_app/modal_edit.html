@@ -5,14 +5,15 @@
     <!-- Поля редактирования заявки -->
     <div class="form-group">
       <label for="id_edit_object_type">Тип объекта:</label>
-      <select id="id_edit_object_type" name="object_type" class="form-control">
+      <select id="id_edit_object_type" name="object_type" class="form-control" data-initial-type="{{ object.object_type.id }}">
         <option value="">Выберите тип</option>
         {% for obj_type in object_types %}
           <option value="{{ obj_type.id }}" {% if object.object_type.id == obj_type.id %}selected{% endif %}>
             {{ obj_type.type_name }}
           </option>
         {% endfor %}
-      </select>
+    </select>
+    
     </div>
     <div class="form-group">
       <label for="id_edit_object_name">Название объекта:</label>
@@ -77,10 +78,22 @@
     <button type="submit" class="btn btn-primary">Сохранить изменения</button>
   </form>
   <hr>
+  {% load json_extras %}
+
   <h6>История изменений</h6>
   <div id="requestHistory">
     {% for record in object.history.all %}
-      <p><strong>{{ record.changed_by }}</strong>: {{ record.changes }} <em>({{ record.timestamp|date:"d.m.Y H:i" }})</em></p>
+      <div class="history-record">
+        <strong>{{ record.changed_by }}</strong> – {{ record.timestamp|date:"d.m.Y H:i" }}<br>
+        <em>Изменения:</em>
+        <ul>
+          {% with record.changes|json_loads as changes_dict %}
+            {% for field, change in changes_dict.items %}
+              <li>{{ field }}: "{{ change.0 }}" → "{{ change.1 }}"</li>
+            {% endfor %}
+          {% endwith %}
+        </ul>
+      </div>
     {% empty %}
       <p>Нет истории изменений.</p>
     {% endfor %}
