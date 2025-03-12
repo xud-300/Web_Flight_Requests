@@ -8,6 +8,7 @@ from .views import (
     get_object_names,
     ExportExcelView,
     ExportPDFView,
+    delete_flight_request,
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('requests/get_object_names/', get_object_names, name='get_object_names'),
     path('requests/export/excel/', ExportExcelView.as_view(), name='export_excel'),
     path('requests/export/pdf/', ExportPDFView.as_view(), name='export_pdf'),
+    path('requests/delete/<int:pk>/', delete_flight_request, name='request_delete'),
 ]

@@ -95,6 +95,8 @@ class FlightRequest(models.Model):
     def __str__(self):
         return f"Request {self.id}"
 
+from django.contrib.auth.models import User as AuthUser  # импортируем встроенную модель
+
 # Новая модель для истории изменений
 class RequestHistory(models.Model):
     id = models.AutoField(primary_key=True)
@@ -104,16 +106,17 @@ class RequestHistory(models.Model):
         related_name='history'
     )
     changed_by = models.ForeignKey(
-        User,
+        AuthUser,  # теперь используем встроенную модель пользователя
         on_delete=models.SET_NULL,
         null=True
     )
     timestamp = models.DateTimeField(auto_now_add=True)
-    changes = models.TextField()  # Можно использовать JSONField, если потребуется структурированное хранение
+    changes = models.TextField()  # можно использовать JSONField для структурированного хранения
 
     class Meta:
         db_table = 'request_history'
-        managed = True  # Новая таблица, можем управлять через Django
+        managed = True
 
     def __str__(self):
         return f"History for Request {self.flight_request.id} at {self.timestamp}"
+

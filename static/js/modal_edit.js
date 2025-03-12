@@ -1,4 +1,20 @@
 document.addEventListener('DOMContentLoaded', function() { 
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Проверяем, начинается ли cookie с нужного имени
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     // Функция для динамической подгрузки названий объектов
     function attachDynamicListeners() {
         const objectTypeSelect = document.getElementById('id_edit_object_type');
@@ -6,85 +22,83 @@ document.addEventListener('DOMContentLoaded', function() {
         const piketFrom = document.getElementById('id_edit_piket_from');
         const piketTo = document.getElementById('id_edit_piket_to');
     
-        if (objectTypeSelect) {
-            objectTypeSelect.addEventListener('change', function() {
-                const selectedValue = this.value;
-                console.log("Изменение типа объекта в edit modal, новое значение:", selectedValue);
+        if (!objectTypeSelect) return;
     
-                // Если тип не выбран – активируем все поля и очищаем
-                if (!selectedValue) {
-                    objectNameSelect.disabled = false;
-                    objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-                    if (piketFrom) { 
-                        piketFrom.disabled = false; 
-                        piketFrom.value = "";
-                    }
-                    if (piketTo) { 
-                        piketTo.disabled = false; 
-                        piketTo.value = "";
-                    }
-                    return;
-                }
+        objectTypeSelect.addEventListener('change', function() {
+            const selectedValue = this.value;
+            console.log("Изменение типа объекта в edit modal:", selectedValue);
     
-                if (selectedValue === "2") {
-                    // Если выбран тип "ЖД" – очищаем и отключаем поле названия объекта
-                    objectNameSelect.disabled = true;
-                    objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
-                } else if (selectedValue === "4") {
-                    // Если выбран тип "Городок" – оставляем поле названия объекта без изменений
-                    objectNameSelect.disabled = false;
-                    // Не очищаем список – предполагается, что сервер уже отрендерил корректные опции.
-                } else {
-                    // Для остальных типов – очищаем и подгружаем новые варианты
-                    objectNameSelect.disabled = false;
-                    objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-                    if (!window.getObjectNamesUrl) {
-                        console.error("window.getObjectNamesUrl не определена!");
-                        return;
-                    }
-                    const url = window.getObjectNamesUrl + '?object_type=' + selectedValue;
-                    console.log("Отправка запроса по URL:", url);
-                    fetch(url)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Ошибка при запросе данных');
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            console.log("Получены данные:", data);
-                            objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-                            data.forEach(item => {
-                                const option = document.createElement('option');
-                                option.value = item.id;
-                                option.textContent = item.object_name;
-                                objectNameSelect.appendChild(option);
-                            });
-                        })
-                        .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
-                }
+            // Сбрасываем поля по умолчанию
+            objectNameSelect.disabled = false;
+            objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+            if (piketFrom) piketFrom.disabled = false;
+            if (piketTo)   piketTo.disabled = false;
     
-                // Для полей пикетов: если выбран тип "Городок", отключаем их, иначе включаем
-                if (selectedValue === "4") {
-                    if (piketFrom) {
-                        piketFrom.value = "";
-                        piketFrom.disabled = true;
-                    }
-                    if (piketTo) {
-                        piketTo.value = "";
-                        piketTo.disabled = true;
-                    }
-                } else {
-                    if (piketFrom) {
-                        piketFrom.disabled = false;
-                    }
-                    if (piketTo) {
-                        piketTo.disabled = false;
-                    }
+            // Если тип не выбран – просто очищаем поля
+            if (!selectedValue) {
+                return;
+            }
+    
+            // 1. Логика для "ЖД" (id = "2")
+            if (selectedValue === "2") {
+                // Отключаем и очищаем "Название объекта"
+                objectNameSelect.disabled = true;
+                objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
+                // Пикеты при "ЖД" остаются включёнными (по вашей логике)
+                return;
+            }
+    
+            // 2. Логика для "Городок" (id = "4")
+            // Требуется AJAX-загрузка названий, но пикеты нужно отключить
+            if (selectedValue === "4") {
+                // Отключаем пикеты
+                if (piketFrom) {
+                    piketFrom.value = "";
+                    piketFrom.disabled = true;
                 }
-            });
-        }
+                if (piketTo) {
+                    piketTo.value = "";
+                    piketTo.disabled = true;
+                }
+                // Далее подгружаем список названий (аналогично другим типам)
+                loadObjectNames(selectedValue, objectNameSelect);
+                return;
+            }
+    
+            // 3. Логика для прочих типов (например, "АД", "Временный проезд")
+            // Требуется AJAX-загрузка названий, пикеты остаются включёнными
+            loadObjectNames(selectedValue, objectNameSelect);
+        });
     }
+    
+    // Вспомогательная функция для AJAX-загрузки названий
+    function loadObjectNames(selectedValue, objectNameSelect) {
+        if (!window.getObjectNamesUrl) {
+            console.error("window.getObjectNamesUrl не определена!");
+            return;
+        }
+        const url = window.getObjectNamesUrl + '?object_type=' + selectedValue;
+        console.log("Отправка запроса по URL:", url);
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка при запросе данных');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Получены данные:", data);
+                objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.object_name;
+                    objectNameSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
+    }
+    
     
 
     function updateFormErrors(form, errors) {
@@ -164,8 +178,71 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-
-    // Обработчик для всех кнопок редактирования заявки
+    function attachDeleteRequestHandler() {
+        const deleteBtn = document.getElementById('deleteRequestBtn');
+        if (!deleteBtn) {
+            console.log("Кнопка удаления заявки не найдена.");
+            return;
+        }
+        deleteBtn.addEventListener('click', function() {
+            const requestId = this.getAttribute('data-request-id');
+            Swal.fire({
+                title: 'Удалить заявку?',
+                text: "Вы уверены, что хотите удалить эту заявку?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Да, удалить',
+                cancelButtonText: 'Отмена'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const url = `/main_app/requests/delete/${requestId}/`;
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error("Ошибка при удалении заявки");
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Заявка удалена',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                const editModal = document.getElementById('editRequestModal');
+                                if (editModal) editModal.style.display = 'none';
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Ошибка',
+                                text: data.error || "Не удалось удалить заявку."
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Ошибка при удалении заявки:", error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка',
+                            text: error.message
+                        });
+                    });
+                }
+            });
+        });
+    }
+    
+    // 2. Изменяем обработчик для кнопок редактирования заявки
     const editButtons = document.querySelectorAll('.editRequestBtn');
     editButtons.forEach(function(button) {
         button.addEventListener('click', function() {
@@ -192,12 +269,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     formContainer.innerHTML = html;
                     attachDynamicListeners();
                     attachEditFormSubmitHandler();
-                    // Читаем исходное значение типа объекта из data-атрибута
+                    // 3. Привязываем обработчик удаления ЗДЕСЬ, после вставки HTML
+                    attachDeleteRequestHandler();
+    
+                    // Инициируем обработку типа объекта
                     const objectTypeSelect = document.getElementById('id_edit_object_type');
                     if (objectTypeSelect) {
                         const initialType = objectTypeSelect.dataset.initialType;
                         console.log("Initial type from dataset: ", initialType);
-                        // Если исходный тип соответствует "ЖД" (например, "2") или "Городок" ("4"), инициируем обработку
                         if (initialType === "2" || initialType === "4") {
                             objectTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
                         }
@@ -210,7 +289,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     editModal.style.display = 'block';
                 }
             })
-            
             .catch(error => {
                 console.error("Ошибка при загрузке данных для редактирования:", error);
                 Swal.fire({

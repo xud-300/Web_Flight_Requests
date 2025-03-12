@@ -11,6 +11,7 @@ from django.template.loader import render_to_string
 from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser
 from main_app.models import User
 from .forms import FlightRequestCreateForm, FlightRequestEditForm
+from django.views.decorators.http import require_POST
 
 
 # Список заявок. Обычный пользователь видит только свои заявки,
@@ -50,17 +51,14 @@ class FlightRequestCreateView(LoginRequiredMixin, CreateView):
                 full_name=getattr(self.request.user, 'full_name', '')
             )
         form.instance.user = user_obj
-        form.instance.username = self.request.user.username
+        # Используем полное имя из профиля для отображения создателя
+        form.instance.username = self.request.user.profile.full_name
         self.object = form.save()
 
-        try:
-            changed_by_instance = User.objects.get(id=self.request.user.id)
-        except User.DoesNotExist:
-            changed_by_instance = None
-
+        # Используем встроенную модель пользователя (AuthUser) напрямую: self.request.user
         RequestHistory.objects.create(
             flight_request=self.object,
-            changed_by=changed_by_instance,
+            changed_by=self.request.user,
             changes=json.dumps({"created": ["", "Заявка создана"]}, ensure_ascii=False)
         )
 
@@ -68,6 +66,7 @@ class FlightRequestCreateView(LoginRequiredMixin, CreateView):
             return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
         else:
             return super().form_valid(form)
+
 
 
     def form_invalid(self, form):
@@ -122,32 +121,25 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         response = super().form_valid(form)
         
-        # Формируем словарь изменений.
-        # Используем form.changed_data для списка изменённых полей.
+        # Формируем словарь изменений, используя form.changed_data
         changes_dict = {}
         for field in form.changed_data:
-            # Получаем старое значение из form.initial
             old_value = form.initial.get(field)
-            # Получаем новое значение из form.cleaned_data
             new_value = form.cleaned_data.get(field)
-            # Приводим к строковому представлению для удобства (можно доработать по необходимости)
             changes_dict[field] = [str(old_value), str(new_value)]
         
-        try:
-            changed_by_instance = User.objects.get(id=self.request.user.id)
-        except User.DoesNotExist:
-            changed_by_instance = None
-
+        # Используем self.request.user напрямую (это встроенная модель, связанная с accounts.Profile)
         RequestHistory.objects.create(
             flight_request=self.object,
-            changed_by=changed_by_instance,
-            changes=json.dumps(changes_dict, ensure_ascii=False)  # Сохраняем изменения в JSON
+            changed_by=self.request.user,
+            changes=json.dumps(changes_dict, ensure_ascii=False)
         )
         
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
         else:
             return response
+
 
 
     def form_invalid(self, form):
@@ -194,3 +186,17 @@ class ExportPDFView(LoginRequiredMixin, View):
         response = HttpResponse("PDF export", content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="requests.pdf"'
         return response
+
+
+@require_POST
+def delete_flight_request(request, pk):
+    # Получаем заявку по pk
+    flight_request = get_object_or_404(FlightRequest, pk=pk)
+    
+    # Проверяем права: разрешаем удаление, если пользователь является администратором
+    # или если пользователь является создателем заявки
+    if not (request.user.is_staff or flight_request.user_id == request.user.id):
+        return HttpResponseForbidden("У вас нет прав для удаления этой заявки.")
+    
+    flight_request.delete()
+    return JsonResponse({'success': True})
