@@ -45,35 +45,42 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
             filter_kwargs = {shooting_type: True}
             qs = qs.filter(**filter_kwargs)
         
-        if shoot_date_from:
-            qs = qs.filter(shoot_date_from__gte=shoot_date_from)
-        
-        if shoot_date_to:
-            qs = qs.filter(shoot_date_to__lte=shoot_date_to)
+        # Фильтрация по диапазону дат съемки (интервалы пересекаются, если shoot_date_from(record) <= shoot_date_to(filter)
+        # и shoot_date_to(record) >= shoot_date_from(filter))
+        if shoot_date_from and shoot_date_to:
+            qs = qs.filter(shoot_date_from__lte=shoot_date_to, shoot_date_to__gte=shoot_date_from)
+        elif shoot_date_from:
+            qs = qs.filter(shoot_date_to__gte=shoot_date_from)
+        elif shoot_date_to:
+            qs = qs.filter(shoot_date_from__lte=shoot_date_to)
         
         # Сортировка: получаем GET-параметры сортировки
         sort_field = self.request.GET.get('sort')
         order = self.request.GET.get('order', 'asc')  # по умолчанию 'asc'
         
-        # Разрешённые поля сортировки и соответствующее им отображение в модели
-        allowed_sort_fields = {
-            'status': 'status',
-            'id': 'id',
-            'object_type': 'object_type__type_name',
-            'shoot_date': 'shoot_date_from'
-        }
-        
-        if sort_field in allowed_sort_fields:
-            field_name = allowed_sort_fields[sort_field]
+        if sort_field == 'shoot_date':
             if order == 'desc':
-                qs = qs.order_by('-' + field_name)
+                qs = qs.order_by('-shoot_date_to')
             else:
-                qs = qs.order_by(field_name)
+                qs = qs.order_by('shoot_date_from')
         else:
-            # Если сортировка не указана или не разрешена, сортируем по дате создания заявки по убыванию
-            qs = qs.order_by('-created_at')
+            allowed_sort_fields = {
+                'status': 'status',
+                'id': 'id',
+                'object_type': 'object_type__type_name'
+            }
+            if sort_field in allowed_sort_fields:
+                field_name = allowed_sort_fields[sort_field]
+                if order == 'desc':
+                    qs = qs.order_by('-' + field_name)
+                else:
+                    qs = qs.order_by(field_name)
+            else:
+                qs = qs.order_by('-created_at')
         
         return qs
+
+
 
 
 

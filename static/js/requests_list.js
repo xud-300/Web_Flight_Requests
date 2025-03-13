@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedValue = this.value;
             console.log("Фильтр: выбран тип объекта:", selectedValue);
             if (selectedValue) {
-                // Показываем блок с выбором названий объекта
                 objectNameFilterContainer.style.display = 'block';
                 if (!window.getObjectNamesUrl) {
                     console.error("window.getObjectNamesUrl не определена!");
@@ -72,30 +71,60 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
             } else {
-                // Если тип не выбран, скрываем блок и очищаем список
                 objectNameFilterContainer.style.display = 'none';
                 objectNameFilter.innerHTML = '<option value="">Выберите название</option>';
             }
         });
     }
     
-    // --- Инициализация Date Range Picker для диапазона дат съемки ---
+    // Инициализация Date Range Picker
     $('#dateRangeFilter').daterangepicker({
-        autoUpdateInput: false,
+        autoApply: true,              // не требует кнопки "Apply"
+        autoUpdateInput: false,       // поле заполняем вручную
         locale: {
+            format: 'DD.MM.YYYY',     // виджет будет парсить/отображать этот формат
             cancelLabel: 'Очистить',
-            format: 'YYYY-MM-DD'
+            applyLabel: 'Применить',
+            daysOfWeek: ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
+            monthNames: [
+                'Январь','Февраль','Март','Апрель','Май','Июнь',
+                'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'
+            ]
         }
     });
+
+    // Обработка события "apply"
     $('#dateRangeFilter').on('apply.daterangepicker', function(ev, picker) {
-        const rangeText = picker.startDate.format('YYYY-MM-DD') + ' - ' + picker.endDate.format('YYYY-MM-DD');
+        // Формируем человекочитаемую строку
+        const rangeText = picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY');
+        // Устанавливаем в поле
         $(this).val(rangeText);
+        // Сохраняем в скрытых полях в формате "YYYY-MM-DD"
         document.getElementById('shoot_date_from').value = picker.startDate.format('YYYY-MM-DD');
         document.getElementById('shoot_date_to').value = picker.endDate.format('YYYY-MM-DD');
     });
+
+    // Обработка события "cancel" (очистка)
     $('#dateRangeFilter').on('cancel.daterangepicker', function(ev, picker) {
         $(this).val('');
         document.getElementById('shoot_date_from').value = '';
         document.getElementById('shoot_date_to').value = '';
     });
+
+    // --- Синхронизация при загрузке страницы ---
+    const hiddenFrom = document.getElementById('shoot_date_from').value;
+    const hiddenTo = document.getElementById('shoot_date_to').value;
+    if (hiddenFrom && hiddenTo) {
+        // Формируем строку для отображения в поле
+        const formattedFrom = moment(hiddenFrom, 'YYYY-MM-DD').format('DD.MM.YYYY');
+        const formattedTo = moment(hiddenTo, 'YYYY-MM-DD').format('DD.MM.YYYY');
+        $('#dateRangeFilter').val(formattedFrom + ' - ' + formattedTo);
+
+        // Синхронизируем внутреннее состояние виджета
+        const picker = $('#dateRangeFilter').data('daterangepicker');
+        if (picker) {
+            picker.setStartDate(moment(hiddenFrom, 'YYYY-MM-DD'));
+            picker.setEndDate(moment(hiddenTo, 'YYYY-MM-DD'));
+        }
+    }
 });

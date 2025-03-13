@@ -93,10 +93,13 @@
           <!-- Фильтр по диапазону дат съемки -->
           <div class="col-auto">
             <label for="dateRangeFilter" class="mr-2 font-weight-bold">Диапазон дат:</label>
-            <input type="text" id="dateRangeFilter" class="form-control"
-                   placeholder="Выберите диапазон"
-                   value="{% if request.GET.shoot_date_from and request.GET.shoot_date_to %}{{ request.GET.shoot_date_from }} - {{ request.GET.shoot_date_to }}{% endif %}" />
-            <!-- Скрытые поля для GET-параметров -->
+            <input type="text" 
+                id="dateRangeFilter" 
+                class="form-control" 
+                placeholder="Выберите диапазон"
+                autocomplete="off"
+                value="{% if request.GET.shoot_date_from and request.GET.shoot_date_to %}{{ request.GET.shoot_date_from }} - {{ request.GET.shoot_date_to }}{% endif %}">
+     <!-- Скрытые поля для GET-параметров -->
             <input type="hidden" id="shoot_date_from" name="shoot_date_from" value="{{ request.GET.shoot_date_from }}">
             <input type="hidden" id="shoot_date_to" name="shoot_date_to" value="{{ request.GET.shoot_date_to }}">
           </div>
@@ -147,12 +150,7 @@
   </div>
 </div>
 
-  
-  
-  
-
-
-    <!-- Таблица заявок -->
+      <!-- Таблица заявок -->
     <div class="table-responsive">
         <table class="table table-bordered table-hover">
             <thead class="thead-dark">
