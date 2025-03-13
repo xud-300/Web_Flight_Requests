@@ -14,16 +14,68 @@ from .forms import FlightRequestCreateForm, FlightRequestEditForm
 from django.views.decorators.http import require_POST
 
 
-# Список заявок. Обычный пользователь видит только свои заявки,
-# а администратор — все заявки.
+# Список заявок
 class FlightRequestListView(LoginRequiredMixin, ListView):
     model = FlightRequest
     template_name = 'main_app/requests_list.html'
     context_object_name = 'requests'
 
     def get_queryset(self):
-        # Возвращаем все заявки для всех пользователей
-        return FlightRequest.objects.all().order_by('-created_at')
+        qs = FlightRequest.objects.all()
+
+        # Фильтрация по GET-параметрам
+        status = self.request.GET.get('status')
+        object_type = self.request.GET.get('object_type')
+        object_name = self.request.GET.get('object_name')
+        shooting_type = self.request.GET.get('shooting_type')
+        shoot_date_from = self.request.GET.get('shoot_date_from')
+        shoot_date_to = self.request.GET.get('shoot_date_to')
+        
+        if status:
+            qs = qs.filter(status=status)
+        
+        if object_type:
+            qs = qs.filter(object_type_id=object_type)
+        
+        if object_name:
+            qs = qs.filter(object_name_id=object_name)
+        
+        if shooting_type:
+            # Предполагаем, что shooting_type соответствует имени булевого поля (например, 'laser')
+            filter_kwargs = {shooting_type: True}
+            qs = qs.filter(**filter_kwargs)
+        
+        if shoot_date_from:
+            qs = qs.filter(shoot_date_from__gte=shoot_date_from)
+        
+        if shoot_date_to:
+            qs = qs.filter(shoot_date_to__lte=shoot_date_to)
+        
+        # Сортировка: получаем GET-параметры сортировки
+        sort_field = self.request.GET.get('sort')
+        order = self.request.GET.get('order', 'asc')  # по умолчанию 'asc'
+        
+        # Разрешённые поля сортировки и соответствующее им отображение в модели
+        allowed_sort_fields = {
+            'status': 'status',
+            'id': 'id',
+            'object_type': 'object_type__type_name',
+            'shoot_date': 'shoot_date_from'
+        }
+        
+        if sort_field in allowed_sort_fields:
+            field_name = allowed_sort_fields[sort_field]
+            if order == 'desc':
+                qs = qs.order_by('-' + field_name)
+            else:
+                qs = qs.order_by(field_name)
+        else:
+            # Если сортировка не указана или не разрешена, сортируем по дате создания заявки по убыванию
+            qs = qs.order_by('-created_at')
+        
+        return qs
+
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -97,6 +149,9 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
         context['object_types'] = ObjectType.objects.all()
         context['object_names'] = Object.objects.filter(object_type=self.object.object_type)
         context['edit_url'] = reverse_lazy('request_edit', args=[self.object.id])
+        # Вычисляем флаг редактируемости:
+        # Если статус заявки "завершена" и пользователь не администратор, то редактирование запрещено.
+        context['is_editable'] = (self.object.status != "завершена") or (self.request.user.is_staff or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin'))
         return context
 
     def get(self, request, *args, **kwargs):

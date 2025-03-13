@@ -180,12 +180,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function attachDeleteRequestHandler() {
         const deleteBtn = document.getElementById('deleteRequestBtn');
+        console.log("Внутри attachDeleteRequestHandler, deleteBtn:", deleteBtn);
         if (!deleteBtn) {
             console.log("Кнопка удаления заявки не найдена.");
             return;
         }
         deleteBtn.addEventListener('click', function() {
             const requestId = this.getAttribute('data-request-id');
+            console.log("Нажата кнопка удаления, requestId:", requestId);
             Swal.fire({
                 title: 'Удалить заявку?',
                 text: "Вы уверены, что хотите удалить эту заявку?",
@@ -196,6 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }).then((result) => {
                 if (result.isConfirmed) {
                     const url = `/main_app/requests/delete/${requestId}/`;
+                    console.log("Удаление заявки, URL:", url);
                     fetch(url, {
                         method: 'POST',
                         headers: {
@@ -210,6 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         return response.json();
                     })
                     .then(data => {
+                        console.log("Ответ сервера при удалении:", data);
                         if (data.success) {
                             Swal.fire({
                                 icon: 'success',
@@ -242,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // 2. Изменяем обработчик для кнопок редактирования заявки
+    // Обработчик для всех кнопок редактирования заявки
     const editButtons = document.querySelectorAll('.editRequestBtn');
     editButtons.forEach(function(button) {
         button.addEventListener('click', function() {
@@ -269,16 +273,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     formContainer.innerHTML = html;
                     attachDynamicListeners();
                     attachEditFormSubmitHandler();
-                    // 3. Привязываем обработчик удаления ЗДЕСЬ, после вставки HTML
+                    // Привязываем обработчик удаления после вставки HTML
                     attachDeleteRequestHandler();
-    
-                    // Инициируем обработку типа объекта
-                    const objectTypeSelect = document.getElementById('id_edit_object_type');
-                    if (objectTypeSelect) {
-                        const initialType = objectTypeSelect.dataset.initialType;
-                        console.log("Initial type from dataset: ", initialType);
-                        if (initialType === "2" || initialType === "4") {
-                            objectTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            
+                    const editForm = document.getElementById('editRequestForm');
+                    if (editForm) {
+                        const isEditable = editForm.dataset.editable;
+                        console.log("Редактируемость формы:", isEditable);
+                        if (isEditable && isEditable.toLowerCase() === "false") {
+                            // Если редактирование запрещено, отключаем все поля и кнопки
+                            const elements = editForm.querySelectorAll('input, select, textarea, button');
+                            elements.forEach(el => {
+                                el.disabled = true;
+                            });
+                            // Добавляем уведомление в начале формы
+                            const notice = document.createElement('p');
+                            notice.style.color = 'red';
+                            notice.textContent = 'Редактирование запрещено: заявка завершена.';
+                            editForm.insertBefore(notice, editForm.firstChild);
+                        } else {
+                            // Если редактирование разрешено, инициируем обработку типа объекта
+                            const objectTypeSelect = document.getElementById('id_edit_object_type');
+                            if (objectTypeSelect) {
+                                const initialType = objectTypeSelect.dataset.initialType;
+                                console.log("Initial type from dataset:", initialType);
+                                if (initialType === "2" || initialType === "4") {
+                                    objectTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            }
                         }
                     }
                 } else {
@@ -289,6 +311,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     editModal.style.display = 'block';
                 }
             })
+            
+            
+            
             .catch(error => {
                 console.error("Ошибка при загрузке данных для редактирования:", error);
                 Swal.fire({
@@ -299,6 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
 
     // Обработчики закрытия модального окна
     const closeModalBtns = document.querySelectorAll('.modal .close');

@@ -21,44 +21,199 @@
         <button id="createRequestBtn" class="btn btn-primary btn-lg">Создать заявку</button>
     </div>
 
-    <!-- Фильтры, сортировка и экспорт -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <form id="filterForm" class="form-inline">
-                <div class="form-group mr-3">
-                    <label for="statusFilter" class="mr-2 font-weight-bold">Статус:</label>
-                    <select id="statusFilter" name="status" class="form-control">
-                        <option value="">Все</option>
-                        <option value="В работе">В работе</option>
-                        <option value="Выполнена">Выполнена</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-secondary">Применить</button>
-            </form>
-        </div>
-        <div class="col-md-6 text-right">
-            <a href="{% url 'export_excel' %}" class="btn btn-success mr-2">Экспорт в Excel</a>
-            <a href="{% url 'export_pdf' %}" class="btn btn-danger">Экспорт в PDF</a>
-        </div>
+<!-- Первая строка: кнопки Фильтрация, Сортировка (слева) и Экспорт (справа) -->
+<div class="row mb-3">
+    <div class="col-md-8 d-flex align-items-center">
+      <!-- Кнопка для переключения видимости панели фильтрации -->
+      <button class="btn btn-secondary mr-2" type="button" data-toggle="collapse" data-target="#filterPanel" aria-expanded="false" aria-controls="filterPanel">
+        Фильтрация
+      </button>
+      <!-- Кнопка для переключения видимости панели сортировки -->
+      <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#sortPanel" aria-expanded="false" aria-controls="sortPanel">
+        Сортировка
+      </button>
     </div>
+    <div class="col-md-4 text-right">
+      <a href="{% url 'export_excel' %}" class="btn btn-success mr-2">Экспорт в Excel</a>
+      <a href="{% url 'export_pdf' %}" class="btn btn-danger">Экспорт в PDF</a>
+    </div>
+</div>
+
+<!-- Вторая строка: сами панели (collapse) для фильтрации и сортировки -->
+<div class="row">
+  <div class="col-md-12">
+  
+    <!-- Панель фильтров -->
+    <div class="collapse {% if request.GET.status or request.GET.object_type or request.GET.object_name or request.GET.shooting_type or request.GET.shoot_date_from or request.GET.shoot_date_to %}show{% endif %}" id="filterPanel">
+      <div class="card card-body mb-3">
+        <form id="filterForm" class="form-row align-items-center" method="get">
+          <!-- Скрытые поля для сохранения текущей сортировки (если есть) -->
+          <input type="hidden" name="sort" value="{{ request.GET.sort }}">
+          <input type="hidden" name="order" value="{{ request.GET.order }}">
+
+          <!-- Фильтр по статусу заявки -->
+          <div class="col-auto">
+            <label for="statusFilter" class="mr-2 font-weight-bold">Статус:</label>
+            <select id="statusFilter" name="status" class="form-control">
+              <option value="">Все</option>
+              <option value="новая" {% if request.GET.status == "новая" %}selected{% endif %}>Новая</option>
+              <option value="завершена" {% if request.GET.status == "завершена" %}selected{% endif %}>Завершена</option>
+            </select>
+          </div>
+          <!-- Фильтр по типу объекта -->
+          <div class="col-auto">
+            <label for="objectTypeFilter" class="mr-2 font-weight-bold">Тип объекта:</label>
+            <select id="objectTypeFilter" name="object_type" class="form-control">
+              <option value="">Все</option>
+              {% for type in object_types %}
+                <option value="{{ type.id }}" {% if request.GET.object_type == type.id|stringformat:"s" %}selected{% endif %}>
+                  {{ type.type_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Фильтр по названию объекта -->
+          <div class="col-auto" id="objectNameFilterContainer" style="display: none;">
+            <label for="objectNameFilter" class="mr-2 font-weight-bold">Название объекта:</label>
+            <select id="objectNameFilter" name="object_name" class="form-control">
+              <option value="">Выберите название</option>
+            </select>
+          </div>
+          <!-- Фильтр по типу съемки -->
+          <div class="col-auto">
+            <label for="shootingTypeFilter" class="mr-2 font-weight-bold">Тип съемки:</label>
+            <select id="shootingTypeFilter" name="shooting_type" class="form-control">
+              <option value="">Все</option>
+              <option value="orthophoto" {% if request.GET.shooting_type == "orthophoto" %}selected{% endif %}>Ортофотоплан</option>
+              <option value="laser" {% if request.GET.shooting_type == "laser" %}selected{% endif %}>Лазерное сканирование</option>
+              <option value="panorama" {% if request.GET.shooting_type == "panorama" %}selected{% endif %}>Панорама</option>
+              <option value="overview" {% if request.GET.shooting_type == "overview" %}selected{% endif %}>Обзорные фото</option>
+            </select>
+          </div>
+          <!-- Фильтр по диапазону дат съемки -->
+          <div class="col-auto">
+            <label for="dateRangeFilter" class="mr-2 font-weight-bold">Диапазон дат:</label>
+            <input type="text" id="dateRangeFilter" class="form-control"
+                   placeholder="Выберите диапазон"
+                   value="{% if request.GET.shoot_date_from and request.GET.shoot_date_to %}{{ request.GET.shoot_date_from }} - {{ request.GET.shoot_date_to }}{% endif %}" />
+            <!-- Скрытые поля для GET-параметров -->
+            <input type="hidden" id="shoot_date_from" name="shoot_date_from" value="{{ request.GET.shoot_date_from }}">
+            <input type="hidden" id="shoot_date_to" name="shoot_date_to" value="{{ request.GET.shoot_date_to }}">
+          </div>
+          <!-- Кнопки "Применить" и "Сбросить" -->
+          <div class="col-auto">
+            <button type="submit" class="btn btn-secondary">Применить</button>
+            <a href="{% url 'requests_list' %}" class="btn btn-secondary ml-2">Сбросить фильтры</a>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Панель сортировки -->
+    <div class="collapse {% if request.GET.sort or request.GET.order %}show{% endif %}" id="sortPanel">
+      <div class="card card-body">
+        <form id="sortForm" class="form-inline" method="get">
+          <!-- Скрытые поля для сохранения текущих фильтров (если есть) -->
+          <input type="hidden" name="status" value="{{ request.GET.status }}">
+          <input type="hidden" name="object_type" value="{{ request.GET.object_type }}">
+          <input type="hidden" name="object_name" value="{{ request.GET.object_name }}">
+          <input type="hidden" name="shooting_type" value="{{ request.GET.shooting_type }}">
+          <input type="hidden" name="shoot_date_from" value="{{ request.GET.shoot_date_from }}">
+          <input type="hidden" name="shoot_date_to" value="{{ request.GET.shoot_date_to }}">
+
+          <div class="form-group mr-3">
+            <label for="sortField" class="mr-2 font-weight-bold">Сортировать по:</label>
+            <select id="sortField" name="sort" class="form-control">
+              <option value="">По умолчанию</option>
+              <option value="status" {% if request.GET.sort == 'status' %}selected{% endif %}>Статус</option>
+              <option value="id" {% if request.GET.sort == 'id' %}selected{% endif %}>Номер заявки</option>
+              <option value="object_type" {% if request.GET.sort == 'object_type' %}selected{% endif %}>Тип объекта</option>
+              <option value="shoot_date" {% if request.GET.sort == 'shoot_date' %}selected{% endif %}>Дата съемки</option>
+            </select>
+          </div>
+          <div class="form-group mr-3">
+            <label for="sortOrder" class="mr-2 font-weight-bold">Порядок:</label>
+            <select id="sortOrder" name="order" class="form-control">
+              <option value="asc" {% if request.GET.order == 'asc' %}selected{% endif %}>Возрастание</option>
+              <option value="desc" {% if request.GET.order == 'desc' %}selected{% endif %}>Убывание</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-secondary">Применить сортировку</button>
+          <a href="{% url 'requests_list' %}" class="btn btn-secondary ml-2">Сбросить сортировку</a>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+  
+  
+  
+
 
     <!-- Таблица заявок -->
     <div class="table-responsive">
         <table class="table table-bordered table-hover">
             <thead class="thead-dark">
                 <tr>
-                    <th>Статус</th>
-                    <th>Номер заявки</th>
-                    <th>Тип объекта</th>
+                    <th>
+                        <a href="?sort=status&order={% if request.GET.sort == 'status' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
+                            Статус
+                            {% if request.GET.sort == 'status' %}
+                                {% if request.GET.order == 'asc' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% else %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort=id&order={% if request.GET.sort == 'id' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
+                            Номер заявки
+                            {% if request.GET.sort == 'id' %}
+                                {% if request.GET.order == 'asc' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% else %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort=object_type&order={% if request.GET.sort == 'object_type' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
+                            Тип объекта
+                            {% if request.GET.sort == 'object_type' %}
+                                {% if request.GET.order == 'asc' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% else %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
                     <th>Название объекта</th>
                     <th>Пикеты</th>
-                    <th>Дата съемки</th>
+                    <th>
+                        <a href="?sort=shoot_date&order={% if request.GET.sort == 'shoot_date' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
+                            Дата съемки
+                            {% if request.GET.sort == 'shoot_date' %}
+                                {% if request.GET.order == 'asc' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% else %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
                     <th>Тип съемки</th>
                     <th>Примечание</th>
                     <th>Создатель</th>
                     <th>Изм.</th>
                 </tr>
             </thead>
+            
             <tbody>
                 {% for request in requests %}
                 <tr>

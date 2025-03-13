@@ -1,6 +1,6 @@
 {% load static %}
 {% if ajax %}
-  <form id="editRequestForm" method="post" action="{{ edit_url }}">
+  <form id="editRequestForm" method="post" action="{{ edit_url }}" data-editable="{{ is_editable }}">
     {% csrf_token %}
     <!-- Поля редактирования заявки -->
     <div class="form-group">
