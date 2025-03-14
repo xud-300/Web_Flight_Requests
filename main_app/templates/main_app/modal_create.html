@@ -29,46 +29,97 @@
               <!-- Список будет подгружаться динамически -->
             </select>
           </div>
-          <div class="form-group">
-            <label for="id_piket_from">Пикет от:</label>
-            <input type="number" id="id_piket_from" name="piket_from" class="form-control">
+          <div class="form-group" id="piketContainer">
+            <label>Пикеты:</label>
+            <div class="form-inline align-items-center">
+              <!-- "От ПК" -->
+              <div class="input-group input-group-sm mr-2" style="width: auto;">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">От ПК</span>
+                </div>
+                <input type="number" 
+                       class="form-control" 
+                       id="id_piket_from" 
+                       name="piket_from" 
+                       placeholder="0" 
+                       min="0" 
+                       style="max-width: 70px;">
+              </div>
+              <!-- "До ПК" -->
+              <div class="input-group input-group-sm" style="width: auto;">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">До ПК</span>
+                </div>
+                <input type="number" 
+                       class="form-control" 
+                       id="id_piket_to" 
+                       name="piket_to" 
+                       placeholder="100" 
+                       min="0" 
+                       style="max-width: 70px;">
+              </div>
+              <!-- Контейнер для общей ошибки по пикетам -->
+              <div id="piketErrorSpace" style="margin-left: 10px;"></div>
+            </div>
           </div>
+          
+          
+          <!-- Вместо двух отдельных дат делаем одно поле с Date Range Picker -->
           <div class="form-group">
-            <label for="id_piket_to">Пикет до:</label>
-            <input type="number" id="id_piket_to" name="piket_to" class="form-control">
+            <label for="id_create_date_range">Диапазон дат съемки:</label>
+            <div class="input-group" style="max-width: 250px;">
+              <div class="input-group-prepend">
+                <span class="input-group-text">
+                  <i class="fas fa-calendar-alt"></i>
+                </span>
+              </div>
+              <input type="text"
+                      id="id_create_date_range"
+                      class="form-control"
+                      placeholder="Выберите диапазон"
+                      title="Выберите период съёмки"
+                      autocomplete="off">
+            </div>
+            <!-- Скрытые поля -->
+            <input type="hidden" id="id_shoot_date_from" name="shoot_date_from">
+            <input type="hidden" id="id_shoot_date_to" name="shoot_date_to">
           </div>
-          <div class="form-group">
-            <label for="id_shoot_date_from">Дата съемки от:</label>
-            <input type="date" id="id_shoot_date_from" name="shoot_date_from" class="form-control">
-          </div>
-          <div class="form-group">
-            <label for="id_shoot_date_to">Дата съемки до:</label>
-            <input type="date" id="id_shoot_date_to" name="shoot_date_to" class="form-control">
-          </div>
+          
           <div class="form-group">
             <label>Тип съемки:</label><br>
-            <div class="form-check form-check-inline">
-              <input type="checkbox" id="id_orthophoto" name="orthophoto" class="form-check-input">
-              <label class="form-check-label" for="id_orthophoto">Ортофотоплан</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input type="checkbox" id="id_laser" name="laser" class="form-check-input">
-              <label class="form-check-label" for="id_laser">Лазерное сканирование</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input type="checkbox" id="id_panorama" name="panorama" class="form-check-input">
-              <label class="form-check-label" for="id_panorama">Панорама</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input type="checkbox" id="id_overview" name="overview" class="form-check-input">
-              <label class="form-check-label" for="id_overview">Обзорные фото</label>
-            </div>
+            <input type="checkbox" class="btn-check shooting-check" id="btn-check-orthophoto" name="orthophoto" autocomplete="off">
+            <label class="btn btn-outline-primary btn-sm" for="btn-check-orthophoto" style="border-radius: 12px;">
+              Ортофотоплан
+            </label>
+          
+            <input type="checkbox" class="btn-check shooting-check" id="btn-check-laser" name="laser" autocomplete="off">
+            <label class="btn btn-outline-primary btn-sm" for="btn-check-laser" style="border-radius: 12px;">
+              Лазерное сканирование
+            </label>
+          
+            <input type="checkbox" class="btn-check shooting-check" id="btn-check-panorama" name="panorama" autocomplete="off">
+            <label class="btn btn-outline-primary btn-sm" for="btn-check-panorama" style="border-radius: 12px;">
+              Панорама
+            </label>
+          
+            <input type="checkbox" class="btn-check shooting-check" id="btn-check-overview" name="overview" autocomplete="off">
+            <label class="btn btn-outline-primary btn-sm" for="btn-check-overview" style="border-radius: 12px;">
+              Обзорные фото
+            </label>
           </div>
+          
           <div class="form-group">
             <label for="id_note">Примечание:</label>
-            <textarea id="id_note" name="note" class="form-control"></textarea>
+            <textarea id="id_note" name="note" class="form-control" rows="3" placeholder="Введите комментарии или уточнения..."></textarea>
           </div>
-          <button type="submit" class="btn btn-primary">Сохранить</button>
+          
+          <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <button type="button" class="btn btn-secondary" id="cancelCreateBtn" data-dismiss="modal">Отменить</button>
+          </div>
+          
+          
+
         </form>
       </div>
     </div>

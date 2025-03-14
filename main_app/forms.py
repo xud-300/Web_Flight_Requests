@@ -6,21 +6,29 @@ class FlightRequestCreateForm(forms.ModelForm):
     class Meta:
         model = FlightRequest
         fields = [
-            'object_type',    
-            'object_name',    
-            'piket_from',     
-            'piket_to',       
+            'object_type',
+            'object_name',
+            'piket_from',
+            'piket_to',
             'shoot_date_from',
-            'shoot_date_to',  
-            'orthophoto',     
-            'laser',          
-            'panorama',       
-            'overview',       
-            'note',           
+            'shoot_date_to',
+            'orthophoto',
+            'laser',
+            'panorama',
+            'overview',
+            'note',
         ]
         widgets = {
             'shoot_date_from': forms.DateInput(attrs={'type': 'date'}),
             'shoot_date_to': forms.DateInput(attrs={'type': 'date'}),
+        }
+        error_messages = {
+            'object_type': {
+                'required': 'Пожалуйста, выберите тип объекта.'
+            },
+            'object_name': {
+                'required': 'Пожалуйста, выберите название объекта.'
+            }
         }
 
     def __init__(self, *args, **kwargs):
@@ -58,47 +66,60 @@ class FlightRequestCreateForm(forms.ModelForm):
         panorama        = cleaned_data.get('panorama')
         overview        = cleaned_data.get('overview')
 
-        # 1. Тип объекта должен быть выбран.
-        if not object_type:
-            self.add_error('object_type', 'Пожалуйста, выберите тип объекта.')
-
-        # 2. Если тип не "ЖД" (id == "2"), нужно выбрать название объекта.
-        if object_type and str(object_type.id) != "2":
-            if not object_name:
-                self.add_error('object_name', 'Пожалуйста, выберите название объекта.')
-        else:
-            # Для типа "ЖД" игнорируем поле object_name
+        # Если тип "ЖД" (id == 2), игнорируем поле object_name
+        if object_type and str(object_type.id) == "2":
             cleaned_data['object_name'] = None
 
         # 3. Поля с датами не могут быть пустыми
-        if not shoot_date_from:
-            self.add_error('shoot_date_from', 'Дата съемки от обязательна для заполнения.')
-        if not shoot_date_to:
-            self.add_error('shoot_date_to', 'Дата съемки до обязательна для заполнения.')
+        missing_from = not shoot_date_from
+        missing_to = not shoot_date_to
 
-        # 4. Поля с пикетами не могут быть пустыми, если тип объекта не "Городок" (id == "4")
+        if missing_from and missing_to:
+            # Привязываем одну общую ошибку к полю shoot_date_from
+            self.add_error('shoot_date_from', 'Пожалуйста, выберите диапазон дат съёмки.')
+
+        else:
+            # Если только одно поле пустое, выводим конкретную ошибку
+            if missing_from:
+                self.add_error('shoot_date_from', 'Дата съемки от обязательна для заполнения.')
+            if missing_to:
+                self.add_error('shoot_date_to', 'Дата съемки до обязательна для заполнения.')
+
+
+        piket_errors = []
+
+        # Если тип != "Городок" (id != "4"), тогда проверяем поля
         if object_type and str(object_type.id) != "4":
+            # 1) Проверка на пустые поля
             if piket_from is None:
-                self.add_error('piket_from', '"Пикет от" обязателен для заполнения.')
+                piket_errors.append('"Пикет от" обязателен для заполнения.')
             if piket_to is None:
-                self.add_error('piket_to', '"Пикет до" обязателен для заполнения.')
+                piket_errors.append('"Пикет до" обязателен для заполнения.')
 
-        # 5. Проверка значений пикетов
-        if piket_from is not None:
-            if piket_from < 0:
-                self.add_error('piket_from', '"Пикет от" не может быть меньше 0.')
-            if not isinstance(piket_from, int):
-                self.add_error('piket_from', '"Пикет от" должен быть целым числом.')
-        if piket_to is not None:
-            if piket_to < 0:
-                self.add_error('piket_to', '"Пикет до" не может быть меньше 0.')
-            if not isinstance(piket_to, int):
-                self.add_error('piket_to', '"Пикет до" должен быть целым числом.')
+            # 2) Проверка на отрицательные значения, нецелые и т.д.
+            if piket_from is not None:
+                if piket_from < 0:
+                    piket_errors.append('"Пикет от" не может быть меньше 0.')
+                if not isinstance(piket_from, int):
+                    piket_errors.append('"Пикет от" должен быть целым числом.')
 
-        if (piket_from is not None) and (piket_to is not None):
-            if piket_from > piket_to:
-                self.add_error('piket_from', '"Пикет от" не может быть больше "Пикета до".')
-                self.add_error('piket_to', '"Пикет до" не может быть меньше "Пикета от".')
+            if piket_to is not None:
+                if piket_to < 0:
+                    piket_errors.append('"Пикет до" не может быть меньше 0.')
+                if not isinstance(piket_to, int):
+                    piket_errors.append('"Пикет до" должен быть целым числом.')
+
+            # 3) Сравнение "Пикет от" > "Пикет до"
+            if (piket_from is not None) and (piket_to is not None):
+                if piket_from > piket_to:
+                    piket_errors.append('"Пикет от" не может быть больше "Пикета до".')
+
+        # Если в итоге есть какие-то ошибки по пикетам:
+        if piket_errors:
+            # Привязываем их к None => Django запишет их как __all__
+            # Соединяем в один текст через <br> (или '\n')
+            self.add_error(None, '<br>'.join(piket_errors))
+
 
         # 6. Проверка дат съемки
         from django.utils import timezone

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 
-
 {% block extra_head %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'css/requests_list.css' %}">
+  <link rel="stylesheet" href="{% static 'css/modal_create.css' %}">
   <script>
       window.getObjectNamesUrl = "{% url 'get_object_names' %}";
   </script>
