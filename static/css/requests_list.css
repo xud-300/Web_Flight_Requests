@@ -19,6 +19,31 @@ body {
     font-weight: 700;
     color: #2c3e50;
   }
+
+/* Кнопка создания заявки */
+.btn-create {
+  background-color: #007bff;   /* Фирменный синий цвет */
+  border: none;
+  color: #fff;
+  border-radius: 24px;         /* Пилюльная форма */
+  padding: 0.75rem 1.5rem;      /* Увеличенные внутренние отступы */
+  font-size: 1.2rem;           /* Чуть крупнее */
+  font-weight: 600;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Эффект при наведении */
+.btn-create:hover {
+  background-color: #0069d9;   /* Немного темнее */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Отступ для иконки внутри кнопки */
+.btn-create i {
+  margin-right: 8px;
+}
+
+
   
   /* Кнопка "Создать заявку" */
   .btn-primary.btn-lg {
@@ -36,45 +61,226 @@ body {
     font-size: 1rem;
     font-weight: 500;
   }
-  
-  /* Стили таблицы */
-  .table-responsive {
-    margin-top: 20px;
-  }
-  
-  .table thead th {
-    background-color: #34495e;
-    color: #fff;
-    border: none;
-    text-transform: uppercase;
-    font-size: 0.9rem;
-    letter-spacing: 0.05rem;
-  }
-  
-  .table tbody td {
-    vertical-align: middle;
-  }
-  
-  .table-bordered {
-    border: 1px solid #e0e0e0;
-  }
-  
-  .table-bordered th,
-  .table-bordered td {
-    border: 1px solid #e0e0e0;
-  }
-  
-  /* Кнопка редактирования */
+  /* Округлим все “outline”-кнопки Bootstrap */
+  .btn-outline-secondary,
+  .btn-outline-success,
+  .btn-outline-danger,
   .btn-outline-primary {
-    border: 1px solid #3498db;
-    color: #3498db;
-    transition: all 0.3s ease;
+    border-radius: 12px; /* значение подберите на свой вкус */
   }
-  
-  .btn-outline-primary:hover {
-    background-color: #3498db;
-    color: #fff;
+
+  /* Если хотите, чтобы и обычные btn-primary/btn-secondary и т.д. тоже имели
+    закругление, можно прописать просто для всех .btn */
+  .btn {
+    border-radius: 12px;
   }
+
+/* Общие стили для таблицы */
+.table {
+  width: 100%;             /* при необходимости */
+  table-layout: auto;      /* или fixed, если задаёте жёсткие ширины столбцов */
+  border: none;
+  border-radius: 6px;
+  overflow: hidden;        /* позволяет «скруглить» углы таблицы */
+}
+
+/* Зебра-окраска для .table-striped */
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #f8f9fa;
+}
+
+/* Hover-эффект для .table-hover */
+.table-hover tbody tr:hover {
+  background-color: #eef3f8;
+}
+
+/* Шапка таблицы */
+.table thead th {
+  background-color: #2c3e50; /* или #34495e */
+  color: #fff;
+  border: none;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.05rem;
+  font-weight: 600;
+  /* При желании можно скруглить углы шапки (если поддерживается):
+     &:first-child { border-top-left-radius: 6px; }
+     &:last-child  { border-top-right-radius: 6px; } */
+}
+
+/* Тело таблицы */
+.table tbody td {
+  vertical-align: middle;
+  border-color: #dee2e6; /* цвет разделительных линий */
+  font-size: 0.9rem;
+  color: #2c3e50;
+  padding: 0.75rem;
+}
+
+/* «Пилюльные» бейджи */
+.badge {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  /* при необходимости меняйте цвет, фон и т.д. */
+}
+
+/* Бейджи статуса "новая" (badge-success) */
+.badge-success {
+  background-color: #28a745; 
+  color: #fff;
+  padding: 0.4rem 0.8rem;  /* чуть больше отступы */
+  border-radius: 14px;     /* чуть более скруглённые углы */
+  font-size: 0.9rem;       /* немного увеличиваем шрифт */
+}
+
+/* Бейджи статуса "завершена" (badge-secondary) */
+.badge-secondary {
+  background-color: #6c757d;  
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 14px;
+  font-size: 0.9rem;
+}
+
+/* Контейнер для вывода типа съёмки (кружок + текст + иконка). 
+   Если нужен столбик — используйте display: block или flex-колонку. 
+   Если нужно в строку — display: inline-flex. */
+.shooting-type {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 4px;   /* отступ между «строками» */
+  margin-right: 8px;    /* если несколько типов идут в одну строку */
+  font-size: 0.9rem;
+}
+
+/* Сам кружочек (dot) */
+.shooting-type .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;  /* отступ между кружочком и текстом */
+}
+
+/* Разные цвета кружков под разные типы */
+.dot-orthophoto {
+  background-color: #3498db; /* синий */
+}
+.dot-laser {
+  background-color: #f39c12; /* оранжевый */
+}
+.dot-panorama {
+  background-color: #9b59b6; /* фиолетовый */
+}
+.dot-overview {
+  background-color: #95a5a6; /* серый */
+}
+
+/* Ограничение ширины для столбца «Примечание» */
+.note-column {
+  width: 200px;               /* или max-width: 200px; */
+  white-space: normal;        /* разрешаем перенос строк */
+  word-wrap: break-word;      /* старый синтаксис для переноса */
+  overflow-wrap: break-word;  /* современный синтаксис для переноса */
+}
+
+/* Выравнивание по центру для столбцов 1 и 2 (пример) */
+.table thead th:nth-child(1),
+.table thead th:nth-child(2) {
+  text-align: center;
+}
+.table tbody td:nth-child(1),
+.table tbody td:nth-child(2) {
+  text-align: center;
+}
+
+/* Общий контейнер для каждой строки типа съемки */
+.shooting-type {
+  display: flex;             /* В ряд, чтобы элементы были на одной линии */
+  align-items: center;       /* Выравниваем иконку, текст и кружок по вертикали */
+  justify-content: flex-start; 
+  margin-bottom: 4px;        /* Небольшой отступ между строками */
+}
+
+/* Небольшой цветной кружок слева */
+.shooting-circle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;         /* Отступ от кружка до текста */
+}
+
+/* Отступ между текстом и иконкой */
+.shooting-type i {
+  margin-left: 6px;  
+  color: #555;
+  font-size: 0.9rem;
+}
+
+/* Пример: делаем текст немного жирнее */
+.shooting-type span {
+  font-weight: 500;
+}
+
+/* Цвета кружков для каждого вида съёмки */
+.shooting-orthophoto .shooting-circle {
+  background-color: #3498db; /* Синий */
+}
+.shooting-laser .shooting-circle {
+  background-color: #f39c12; /* Оранжевый */
+}
+.shooting-panorama .shooting-circle {
+  background-color: #9b59b6; /* Фиолетовый */
+}
+.shooting-overview .shooting-circle {
+  background-color: #95a5a6; /* Серый */
+}
+
+
+/* Пример стилизации кнопки «Редактировать» */
+.btn-outline-primary {
+  border: 1px solid #3498db;
+  color: #3498db;
+  transition: all 0.3s ease;
+}
+.btn-outline-primary:hover {
+  background-color: #3498db;
+  color: #fff;
+}
+
+
+/* Пример стилизации кнопки «Редактировать» */
+.btn-outline-primary {
+  border: 1px solid #3498db;
+  color: #3498db;
+  transition: all 0.3s ease;
+}
+.btn-outline-primary:hover {
+  background-color: #3498db;
+  color: #fff;
+}
+
+
+/* Кнопка "Редактировать" */
+.btn-sm.btn-outline-primary {
+  border-color: #3498db;
+  color: #3498db;
+  transition: 0.3s;
+}
+.btn-sm.btn-outline-primary:hover {
+  background-color: #3498db;
+  color: #fff;
+}
+
+/* Уменьшаем иконки сортировки (если нужно) */
+.fas.fa-sort-up, .fas.fa-sort-down {
+  font-size: 0.75rem;
+  margin-left: 4px;
+  color: #ddd; /* или #fff, если на тёмном фоне */
+}
+
+
+
   
   /* Модальные окна */
   .modal {
@@ -133,29 +339,3 @@ body {
     color: #000;
   }
   
-  /* Стили для бейджей статусов */
-  .badge {
-    font-size: 0.8rem;
-    padding: 0.4em 0.6em;
-    border-radius: 4px;
-  }
-  
-  .badge-info {
-    background-color: #1abc9c;
-    color: #fff;
-  }
-  
-  .badge-warning {
-    background-color: #f39c12;
-    color: #fff;
-  }
-  
-  .badge-primary {
-    background-color: #3498db;
-    color: #fff;
-  }
-  
-  .badge-secondary {
-    background-color: #95a5a6;
-    color: #fff;
-  }

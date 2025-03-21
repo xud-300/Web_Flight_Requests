@@ -173,26 +173,34 @@ class FlightRequestEditForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
-        super(FlightRequestEditForm, self).__init__(*args, **kwargs)
-        # Если форма уже отправлена (bound form), используем данные POST
-        if self.data:
-            const_type = self.data.get('object_type')
-            if const_type == "2":  # Если выбран тип "ЖД"
-                self.fields['object_name'].required = False
-                self.fields['object_name'].widget = forms.HiddenInput()
-            else:
-                self.fields['object_name'].required = True
+        super().__init__(*args, **kwargs)
+        # Динамически настраиваем queryset для названия объекта
+        if 'object_type' in self.data:
+            try:
+                object_type_id = int(self.data.get('object_type'))
+                self.fields['object_name'].queryset = Object.objects.filter(object_type_id=object_type_id)
+                # Если тип выбран и он не "ЖД", переопределяем сообщение об обязательном поле
+                if self.data.get('object_type') != "2":
+                    self.fields['object_name'].error_messages = {
+                        'required': 'Пожалуйста, выберите название объекта.'
+                    }
+            except (ValueError, TypeError):
+                self.fields['object_name'].queryset = Object.objects.none()
+        elif self.instance.pk:
+            self.fields['object_name'].queryset = self.instance.object_type.object_set.all()
         else:
-            # Для формы, не привязанной к POST, ориентируемся на экземпляр
-            if self.instance and self.instance.object_type and str(self.instance.object_type.id) == "2":
-                self.fields['object_name'].required = False
-                self.fields['object_name'].widget = forms.HiddenInput()
-            else:
-                self.fields['object_name'].required = True
+            self.fields['object_name'].queryset = Object.objects.none()
+
+        # Если выбран тип "ЖД" (id == "2"), скрываем поле "Название объекта"
+        if self.data.get('object_type') == "2":
+            self.fields['object_name'].required = False
+            self.fields['object_name'].empty_label = "Нет названий"
+            self.fields['object_name'].widget = forms.HiddenInput()
+
 
     def clean(self):
         cleaned_data = super().clean()
-        
+
         object_type     = cleaned_data.get('object_type')
         object_name     = cleaned_data.get('object_name')
         piket_from      = cleaned_data.get('piket_from')
@@ -203,59 +211,75 @@ class FlightRequestEditForm(forms.ModelForm):
         laser           = cleaned_data.get('laser')
         panorama        = cleaned_data.get('panorama')
         overview        = cleaned_data.get('overview')
-        
-        # 1. Тип объекта обязателен
-        if not object_type:
-            self.add_error('object_type', 'Пожалуйста, выберите тип объекта.')
-        
-        # 2. Если выбран тип не "ЖД" (id != "2"), требуется название объекта
-        if object_type and str(object_type.id) != "2":
-            if not object_name:
-                self.add_error('object_name', 'Пожалуйста, выберите название объекта.')
+
+        # Если тип объекта не выбран – ошибка для него будет показана, поэтому для object_name не добавляем дополнительную ошибку.
+        if object_type:
+            if str(object_type.id) != "2":
+                if not object_name:
+                    self.add_error('object_name', 'Пожалуйста, выберите название объекта.')
         else:
-            # Если выбран тип "ЖД", игнорируем поле
-            cleaned_data['object_name'] = None
-        
-        # 3. Проверка значений пикетов
-        if piket_from is not None:
-            if piket_from < 0:
-                self.add_error('piket_from', '"Пикет от" не может быть меньше 0.')
-            if not isinstance(piket_from, int):
-                self.add_error('piket_from', '"Пикет от" должен быть целым числом.')
-        if piket_to is not None:
-            if piket_to < 0:
-                self.add_error('piket_to', '"Пикет до" не может быть меньше 0.')
-            if not isinstance(piket_to, int):
-                self.add_error('piket_to', '"Пикет до" должен быть целым числом.')
-        if piket_from is not None and piket_to is not None:
-            if piket_from > piket_to:
-                self.add_error('piket_from', '"Пикет от" не может быть больше "Пикета до".')
-                self.add_error('piket_to', '"Пикет до" не может быть меньше "Пикета от".')
-        
-        # 4. Проверка дат съемки
-        from django.utils import timezone
-        today = timezone.now().date()
+            # Если объект не выбран, то ошибка для object_type уже должна появиться.
+            pass
+
+        # Далее – остальные проверки (даты, пикеты и т.д.) остаются без изменений
+        missing_from = not shoot_date_from
+        missing_to = not shoot_date_to
+
+        if missing_from and missing_to:
+            self.add_error('shoot_date_from', 'Пожалуйста, выберите диапазон дат съёмки.')
+        else:
+            if missing_from:
+                self.add_error('shoot_date_from', 'Дата съемки от обязательна для заполнения.')
+            if missing_to:
+                self.add_error('shoot_date_to', 'Дата съемки до обязательна для заполнения.')
+
+        piket_errors = []
+
+        # Если тип объекта не "Городок" (id != "4"), тогда проверяем поля
+        if object_type and str(object_type.id) != "4":
+            # 1) Проверка на пустые поля
+            if piket_from is None:
+                piket_errors.append('"Пикет от" обязателен для заполнения.')
+            if piket_to is None:
+                piket_errors.append('"Пикет до" обязателен для заполнения.')
+
+            # 2) Проверка на отрицательные значения и тип данных
+            if piket_from is not None:
+                if piket_from < 0:
+                    piket_errors.append('"Пикет от" не может быть меньше 0.')
+                if not isinstance(piket_from, int):
+                    piket_errors.append('"Пикет от" должен быть целым числом.')
+            if piket_to is not None:
+                if piket_to < 0:
+                    piket_errors.append('"Пикет до" не может быть меньше 0.')
+                if not isinstance(piket_to, int):
+                    piket_errors.append('"Пикет до" должен быть целым числом.')
+
+            # 3) Проверка, что "Пикет от" не больше "Пикета до"
+            if (piket_from is not None) and (piket_to is not None) and (piket_from > piket_to):
+                piket_errors.append('"Пикет от" не может быть больше "Пикета до".')
+
+        if piket_errors:
+            self.add_error(None, '<br>'.join(piket_errors))
+
+
+
+        # Проверка дат съемки (без проверки, что даты не в прошлом)
         if not shoot_date_from:
             self.add_error('shoot_date_from', 'Дата съемки от обязательна для заполнения.')
-        elif shoot_date_from < today:
-            self.add_error('shoot_date_from', 'Дата съемки от не может быть в прошлом.')
-        
         if not shoot_date_to:
             self.add_error('shoot_date_to', 'Дата съемки до обязательна для заполнения.')
-        elif shoot_date_to < today:
-            self.add_error('shoot_date_to', 'Дата съемки до не может быть в прошлом.')
-        
         if shoot_date_from and shoot_date_to:
             if shoot_date_from > shoot_date_to:
                 self.add_error('shoot_date_from', '"Дата съемки от" не может быть позже "Даты съемки до".')
                 self.add_error('shoot_date_to', '"Дата съемки до" не может быть раньше "Даты съемки от".')
-        
-        # 5. Должен быть выбран хотя бы один тип съемки.
+
         if not (orthophoto or laser or panorama or overview):
-            error_msg = 'Пожалуйста, выберите хотя бы один тип съемки.'
-            self.add_error('overview', error_msg)
-        
+            self.add_error('overview', 'Пожалуйста, выберите хотя бы один тип съемки.')
+
         return cleaned_data
+
+
 
     def save(self, commit=True):
         instance = super().save(commit=False)

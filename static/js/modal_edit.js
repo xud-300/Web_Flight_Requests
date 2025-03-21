@@ -31,27 +31,30 @@ document.addEventListener('DOMContentLoaded', function() {
             // Сбрасываем поля по умолчанию
             objectNameSelect.disabled = false;
             objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-            if (piketFrom) piketFrom.disabled = false;
-            if (piketTo)   piketTo.disabled = false;
+            if (piketFrom) {
+                piketFrom.disabled = false;
+            }
+            if (piketTo) {
+                piketTo.disabled = false;
+            }
     
-            // Если тип не выбран – просто очищаем поля
+            // Если тип не выбран – просто очищаем поля и выходим
             if (!selectedValue) {
                 return;
             }
     
-            // 1. Логика для "ЖД" (id = "2")
+            // --- 1. Логика для "ЖД" (id = "2") ---
             if (selectedValue === "2") {
                 // Отключаем и очищаем "Название объекта"
                 objectNameSelect.disabled = true;
                 objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
-                // Пикеты при "ЖД" остаются включёнными (по вашей логике)
+                // Пикеты при "ЖД" остаются включёнными
                 return;
             }
     
-            // 2. Логика для "Городок" (id = "4")
-            // Требуется AJAX-загрузка названий, но пикеты нужно отключить
+            // --- 2. Логика для "Городок" (id = "4") ---
+            // Отличается только тем, что отключаем пикеты
             if (selectedValue === "4") {
-                // Отключаем пикеты
                 if (piketFrom) {
                     piketFrom.value = "";
                     piketFrom.disabled = true;
@@ -60,16 +63,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     piketTo.value = "";
                     piketTo.disabled = true;
                 }
-                // Далее подгружаем список названий (аналогично другим типам)
-                loadObjectNames(selectedValue, objectNameSelect);
-                return;
             }
     
-            // 3. Логика для прочих типов (например, "АД", "Временный проезд")
-            // Требуется AJAX-загрузка названий, пикеты остаются включёнными
+            // --- 3. Общая логика для "Городок" ИЛИ "прочие" ---
+            // Вызываем AJAX, чтобы подгрузить/обновить список названий
             loadObjectNames(selectedValue, objectNameSelect);
         });
     }
+    
     
     // Вспомогательная функция для AJAX-загрузки названий
     function loadObjectNames(selectedValue, objectNameSelect) {
@@ -95,9 +96,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     option.textContent = item.object_name;
                     objectNameSelect.appendChild(option);
                 });
+                // Если задан data-initial-value, устанавливаем выбранное значение
+                const initialValue = objectNameSelect.getAttribute('data-initial-value');
+                if (initialValue) {
+                    objectNameSelect.value = initialValue;
+                }
             })
             .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
     }
+    
     
     
 

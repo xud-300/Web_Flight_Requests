@@ -17,7 +17,7 @@
     </div>
     <div class="form-group">
       <label for="id_edit_object_name">Название объекта:</label>
-      <select id="id_edit_object_name" name="object_name" class="form-control">
+      <select id="id_edit_object_name" name="object_name" class="form-control" data-initial-value="{{ object.object_name.id }}">
         <option value="">Выберите название</option>
         {% for obj in object_names %}
           <option value="{{ obj.id }}" {% if object.object_name.id == obj.id %}selected{% endif %}>
@@ -26,41 +26,78 @@
         {% endfor %}
       </select>
     </div>
-    <div class="form-group">
-      <label for="id_edit_piket_from">Пикет от:</label>
-      <input type="number" id="id_edit_piket_from" name="piket_from" class="form-control" value="{{ object.piket_from }}">
+    <div class="form-group" id="piketContainer">
+      <label>Пикеты:</label>
+      <div class="form-inline align-items-center">
+        <!-- "От ПК" -->
+        <div class="input-group input-group-sm mr-2" style="width: auto;">
+          <div class="input-group-prepend">
+            <span class="input-group-text">От ПК</span>
+          </div>
+          <input type="number" 
+                 class="form-control" 
+                 id="id_edit_piket_from" 
+                 name="piket_from" 
+                 placeholder="0" 
+                 min="0" 
+                 style="max-width: 70px;"
+                 value="{{ object.piket_from }}">
+        </div>
+        <!-- "До ПК" -->
+        <div class="input-group input-group-sm" style="width: auto;">
+          <div class="input-group-prepend">
+            <span class="input-group-text">До ПК</span>
+          </div>
+          <input type="number" 
+                 class="form-control" 
+                 id="id_edit_piket_to" 
+                 name="piket_to" 
+                 placeholder="100" 
+                 min="0" 
+                 style="max-width: 70px;"
+                 value="{{ object.piket_to }}">
+        </div>
+        <!-- Контейнер для общей ошибки по пикетам -->
+        <div id="piketErrorSpace" style="margin-left: 10px;"></div>
+      </div>
     </div>
+    
     <div class="form-group">
-      <label for="id_edit_piket_to">Пикет до:</label>
-      <input type="number" id="id_edit_piket_to" name="piket_to" class="form-control" value="{{ object.piket_to }}">
+      <label for="id_edit_date_range">Диапазон дат съемки:</label>
+      <div class="input-group" style="max-width: 250px;">
+        <div class="input-group-prepend">
+          <span class="input-group-text">
+            <i class="fas fa-calendar-alt"></i>
+          </span>
+        </div>
+        <input type="text"
+               id="id_edit_date_range"
+               class="form-control"
+               placeholder="Выберите диапазон"
+               title="Выберите период съёмки"
+               autocomplete="off"
+               value="{{ object.shoot_date_from|date:'d.m.Y' }} - {{ object.shoot_date_to|date:'d.m.Y' }}">
+      </div>
+      <!-- Скрытые поля -->
+      <input type="hidden" id="id_edit_shoot_date_from" name="shoot_date_from" value="{{ object.shoot_date_from|date:'Y-m-d' }}">
+      <input type="hidden" id="id_edit_shoot_date_to" name="shoot_date_to" value="{{ object.shoot_date_to|date:'Y-m-d' }}">
     </div>
-    <div class="form-group">
-      <label for="id_edit_shoot_date_from">Дата съемки от:</label>
-      <input type="date" id="id_edit_shoot_date_from" name="shoot_date_from" class="form-control" value="{{ object.shoot_date_from|date:'Y-m-d' }}">
-    </div>
-    <div class="form-group">
-      <label for="id_edit_shoot_date_to">Дата съемки до:</label>
-      <input type="date" id="id_edit_shoot_date_to" name="shoot_date_to" class="form-control" value="{{ object.shoot_date_to|date:'Y-m-d' }}">
-    </div>
+    
     <div class="form-group">
       <label>Тип съемки:</label><br>
-      <div class="form-check form-check-inline">
-        <input type="checkbox" id="id_edit_orthophoto" name="orthophoto" class="form-check-input" {% if object.orthophoto %}checked{% endif %}>
-        <label class="form-check-label" for="id_edit_orthophoto">Ортофотоплан</label>
-      </div>
-      <div class="form-check form-check-inline">
-        <input type="checkbox" id="id_edit_laser" name="laser" class="form-check-input" {% if object.laser %}checked{% endif %}>
-        <label class="form-check-label" for="id_edit_laser">Лазерное сканирование</label>
-      </div>
-      <div class="form-check form-check-inline">
-        <input type="checkbox" id="id_edit_panorama" name="panorama" class="form-check-input" {% if object.panorama %}checked{% endif %}>
-        <label class="form-check-label" for="id_edit_panorama">Панорама</label>
-      </div>
-      <div class="form-check form-check-inline">
-        <input type="checkbox" id="id_edit_overview" name="overview" class="form-check-input" {% if object.overview %}checked{% endif %}>
-        <label class="form-check-label" for="id_edit_overview">Обзорные фото</label>
-      </div>
+      <input type="checkbox" class="btn-check shooting-check" id="btn-check-edit-orthophoto" name="orthophoto" autocomplete="off" {% if object.orthophoto %}checked{% endif %}>
+      <label class="btn btn-outline-primary btn-sm" for="btn-check-edit-orthophoto" style="border-radius: 12px;">Ортофотоплан</label>
+    
+      <input type="checkbox" class="btn-check shooting-check" id="btn-check-edit-laser" name="laser" autocomplete="off" {% if object.laser %}checked{% endif %}>
+      <label class="btn btn-outline-primary btn-sm" for="btn-check-edit-laser" style="border-radius: 12px;">Лазерное сканирование</label>
+    
+      <input type="checkbox" class="btn-check shooting-check" id="btn-check-edit-panorama" name="panorama" autocomplete="off" {% if object.panorama %}checked{% endif %}>
+      <label class="btn btn-outline-primary btn-sm" for="btn-check-edit-panorama" style="border-radius: 12px;">Панорама</label>
+    
+      <input type="checkbox" class="btn-check shooting-check" id="btn-check-edit-overview" name="overview" autocomplete="off" {% if object.overview %}checked{% endif %}>
+      <label class="btn btn-outline-primary btn-sm" for="btn-check-edit-overview" style="border-radius: 12px;">Обзорные фото</label>
     </div>
+    
     <div class="form-group">
       <label for="id_edit_note">Примечание:</label>
       <textarea id="id_edit_note" name="note" class="form-control">{{ object.note }}</textarea>
@@ -101,7 +138,7 @@
   </div>
 {% else %}
   <div id="editRequestModal" class="modal" style="display: none;">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Редактировать заявку</h5>

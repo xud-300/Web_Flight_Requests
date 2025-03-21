@@ -14,35 +14,51 @@
 {% block title %}Список заявок{% endblock %}
 
 {% block content %}
+<!-- Заголовок и кнопка создания заявки -->
 <div class="container my-4">
-    <!-- Заголовок и кнопка создания заявки -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="display-4">Список заявок</h1>
-        <button id="createRequestBtn" class="btn btn-primary btn-lg">Создать заявку</button>
-    </div>
-
-<!-- Первая строка: кнопки Фильтрация, Сортировка (слева) и Экспорт (справа) -->
-<div class="row mb-3">
-    <div class="col-md-8 d-flex align-items-center">
-      <!-- Кнопка для переключения видимости панели фильтрации -->
-      <button class="btn btn-secondary mr-2" type="button" data-toggle="collapse" data-target="#filterPanel" aria-expanded="false" aria-controls="filterPanel">
-        Фильтрация
-      </button>
-      <!-- Кнопка для переключения видимости панели сортировки -->
-      <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#sortPanel" aria-expanded="false" aria-controls="sortPanel">
-        Сортировка
-      </button>
-    </div>
-    <div class="col-md-4 text-right">
-      <a href="{% url 'export_excel' %}" class="btn btn-success mr-2">Экспорт в Excel</a>
-      <a href="{% url 'export_pdf' %}" class="btn btn-danger">Экспорт в PDF</a>
-    </div>
+<!-- Заголовок и кнопка создания заявки -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h2 mb-0" style="font-weight: 600;">Список заявок</h1>
+  <button id="createRequestBtn" class="btn btn-create">
+    <i class="fas fa-plus"></i>
+    Создать заявку
+  </button>
 </div>
 
-<!-- Вторая строка: сами панели (collapse) для фильтрации и сортировки -->
+
+<!-- Кнопки Фильтрация, Сортировка, Экспорт -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <!-- Кнопка Фильтрация -->
+    <button class="btn btn-outline-secondary mr-2" type="button"
+            data-toggle="collapse"
+            data-target="#filterPanel"
+            aria-expanded="false"
+            aria-controls="filterPanel">
+      <i class="fas fa-filter mr-1"></i> Фильтрация
+    </button>
+    <!-- Кнопка Сортировка -->
+    <button class="btn btn-outline-secondary mr-2" type="button"
+            data-toggle="collapse"
+            data-target="#sortPanel"
+            aria-expanded="false"
+            aria-controls="sortPanel">
+      <i class="fas fa-sort mr-1"></i> Сортировка
+    </button>
+    <!-- Кнопки экспорта -->
+    <a href="{% url 'export_excel' %}" class="btn btn-outline-success mr-2">
+      <i class="fas fa-file-excel mr-1"></i> Excel
+    </a>
+    <a href="{% url 'export_pdf' %}" class="btn btn-outline-danger">
+      <i class="fas fa-file-pdf mr-1"></i> PDF
+    </a>
+  </div>
+</div>
+
+
+<!-- Фильтрация и Сортировка (collapse) -->
 <div class="row">
-  <div class="col-md-12">
-  
+  <div class="col-12">
     <!-- Панель фильтров -->
     <div class="collapse {% if request.GET.status or request.GET.object_type or request.GET.object_name or request.GET.shooting_type or request.GET.shoot_date_from or request.GET.shoot_date_to %}show{% endif %}" id="filterPanel">
       <div class="card card-body mb-3">
@@ -52,7 +68,7 @@
           <input type="hidden" name="order" value="{{ request.GET.order }}">
 
           <!-- Фильтр по статусу заявки -->
-          <div class="col-auto">
+          <div class="col-auto mb-2">
             <label for="statusFilter" class="mr-2 font-weight-bold">Статус:</label>
             <select id="statusFilter" name="status" class="form-control">
               <option value="">Все</option>
@@ -60,8 +76,9 @@
               <option value="завершена" {% if request.GET.status == "завершена" %}selected{% endif %}>Завершена</option>
             </select>
           </div>
+
           <!-- Фильтр по типу объекта -->
-          <div class="col-auto">
+          <div class="col-auto mb-2">
             <label for="objectTypeFilter" class="mr-2 font-weight-bold">Тип объекта:</label>
             <select id="objectTypeFilter" name="object_type" class="form-control">
               <option value="">Все</option>
@@ -72,15 +89,17 @@
               {% endfor %}
             </select>
           </div>
+
           <!-- Фильтр по названию объекта -->
-          <div class="col-auto" id="objectNameFilterContainer" style="display: none;">
+          <div class="col-auto mb-2" id="objectNameFilterContainer" style="display: none;">
             <label for="objectNameFilter" class="mr-2 font-weight-bold">Название объекта:</label>
             <select id="objectNameFilter" name="object_name" class="form-control">
               <option value="">Выберите название</option>
             </select>
           </div>
+
           <!-- Фильтр по типу съемки -->
-          <div class="col-auto">
+          <div class="col-auto mb-2">
             <label for="shootingTypeFilter" class="mr-2 font-weight-bold">Тип съемки:</label>
             <select id="shootingTypeFilter" name="shooting_type" class="form-control">
               <option value="">Все</option>
@@ -90,28 +109,34 @@
               <option value="overview" {% if request.GET.shooting_type == "overview" %}selected{% endif %}>Обзорные фото</option>
             </select>
           </div>
+
           <!-- Фильтр по диапазону дат съемки -->
-          <div class="col-auto">
+          <div class="col-auto mb-2">
             <label for="dateRangeFilter" class="mr-2 font-weight-bold">Диапазон дат:</label>
             <input type="text" 
-                id="dateRangeFilter" 
-                class="form-control" 
-                placeholder="Выберите диапазон"
-                autocomplete="off"
-                value="{% if request.GET.shoot_date_from and request.GET.shoot_date_to %}{{ request.GET.shoot_date_from }} - {{ request.GET.shoot_date_to }}{% endif %}">
-     <!-- Скрытые поля для GET-параметров -->
+                   id="dateRangeFilter" 
+                   class="form-control" 
+                   placeholder="Выберите диапазон"
+                   autocomplete="off"
+                   value="{% if request.GET.shoot_date_from and request.GET.shoot_date_to %}{{ request.GET.shoot_date_from }} - {{ request.GET.shoot_date_to }}{% endif %}">
+            <!-- Скрытые поля для GET-параметров -->
             <input type="hidden" id="shoot_date_from" name="shoot_date_from" value="{{ request.GET.shoot_date_from }}">
             <input type="hidden" id="shoot_date_to" name="shoot_date_to" value="{{ request.GET.shoot_date_to }}">
           </div>
+
           <!-- Кнопки "Применить" и "Сбросить" -->
-          <div class="col-auto">
-            <button type="submit" class="btn btn-secondary">Применить</button>
-            <a href="{% url 'requests_list' %}" class="btn btn-secondary ml-2">Сбросить фильтры</a>
+          <div class="col-auto mb-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-check mr-1"></i> Применить
+            </button>
+            <a href="{% url 'requests_list' %}" class="btn btn-light ml-2">
+              <i class="fas fa-undo mr-1"></i> Сбросить фильтры
+            </a>
           </div>
         </form>
       </div>
     </div>
-    
+
     <!-- Панель сортировки -->
     <div class="collapse {% if request.GET.sort or request.GET.order %}show{% endif %}" id="sortPanel">
       <div class="card card-body">
@@ -124,7 +149,7 @@
           <input type="hidden" name="shoot_date_from" value="{{ request.GET.shoot_date_from }}">
           <input type="hidden" name="shoot_date_to" value="{{ request.GET.shoot_date_to }}">
 
-          <div class="form-group mr-3">
+          <div class="form-group mr-3 mb-2">
             <label for="sortField" class="mr-2 font-weight-bold">Сортировать по:</label>
             <select id="sortField" name="sort" class="form-control">
               <option value="">По умолчанию</option>
@@ -134,21 +159,28 @@
               <option value="shoot_date" {% if request.GET.sort == 'shoot_date' %}selected{% endif %}>Дата съемки</option>
             </select>
           </div>
-          <div class="form-group mr-3">
+
+          <div class="form-group mr-3 mb-2">
             <label for="sortOrder" class="mr-2 font-weight-bold">Порядок:</label>
             <select id="sortOrder" name="order" class="form-control">
               <option value="asc" {% if request.GET.order == 'asc' %}selected{% endif %}>Возрастание</option>
               <option value="desc" {% if request.GET.order == 'desc' %}selected{% endif %}>Убывание</option>
             </select>
           </div>
-          <button type="submit" class="btn btn-secondary">Применить сортировку</button>
-          <a href="{% url 'requests_list' %}" class="btn btn-secondary ml-2">Сбросить сортировку</a>
+
+          <button type="submit" class="btn btn-primary mb-2 mr-2">
+            <i class="fas fa-check mr-1"></i> Применить сортировку
+          </button>
+          <a href="{% url 'requests_list' %}" class="btn btn-light mb-2">
+            <i class="fas fa-undo mr-1"></i> Сбросить сортировку
+          </a>
         </form>
       </div>
     </div>
-
   </div>
 </div>
+
+
 
       <!-- Таблица заявок -->
     <div class="table-responsive">
@@ -169,7 +201,7 @@
                     </th>
                     <th>
                         <a href="?sort=id&order={% if request.GET.sort == 'id' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
-                            Номер заявки
+                            №
                             {% if request.GET.sort == 'id' %}
                                 {% if request.GET.order == 'asc' %}
                                     <i class="fas fa-sort-up"></i>
@@ -206,28 +238,72 @@
                         </a>
                     </th>
                     <th>Тип съемки</th>
-                    <th>Примечание</th>
+                    <th class="note-column">Примечание</th>
                     <th>Создатель</th>
-                    <th>Изм.</th>
+                    <th>Изменить</th>
                 </tr>
             </thead>
             
             <tbody>
                 {% for request in requests %}
                 <tr>
-                    <td>{{ request.status }}</td>
+                  <td>
+                    {% if request.status|lower == "новая" %}
+                      <span class="badge badge-success">В работе</span>
+                    {% elif request.status|lower == "завершена" %}
+                      <span class="badge badge-secondary">Выполнена</span>
+                    {% else %}
+                      {{ request.status }}
+                    {% endif %}
+                  </td>
                     <td>{{ request.id }}</td>
                     <td>{{ request.object_type.type_name }}</td>
                     <td>{{ request.object_name.object_name }}</td>
-                    <td>{{ request.piket_from }} - {{ request.piket_to }}</td>
+                    <td>
+                      {% with from_val=request.piket_from|default_if_none:"" to_val=request.piket_to|default_if_none:"" %}
+                        {% if from_val or to_val %}
+                          ПК{{ from_val|default:"0" }} – ПК{{ to_val|default:"0" }}
+                        {% endif %}
+                      {% endwith %}
+                    </td>
+                    
+                    
                     <td>{{ request.shoot_date_from|date:"d.m.Y" }} - {{ request.shoot_date_to|date:"d.m.Y" }}</td>
                     <td>
-                        {% if request.orthophoto %}<span class="badge badge-info">Ортофотоплан</span><br>{% endif %}
-                        {% if request.laser %}<span class="badge badge-warning">Лазерное сканирование</span><br>{% endif %}
-                        {% if request.panorama %}<span class="badge badge-primary">Панорама</span><br>{% endif %}
-                        {% if request.overview %}<span class="badge badge-secondary">Обзорные фото</span>{% endif %}
+                      {% if request.orthophoto %}
+                        <div class="shooting-type shooting-orthophoto">
+                          <span class="shooting-circle"></span>
+                          <span>Ортофотоплан</span>
+                          <i class="fa-solid fa-map-location-dot"></i>
+                        </div>
+                      {% endif %}
+                      {% if request.laser %}
+                        <div class="shooting-type shooting-laser">
+                          <span class="shooting-circle"></span>
+                          <span>Лазерное сканирование</span>
+                          <i class="fas fa-bolt"></i>
+                        </div>
+                      {% endif %}
+                      {% if request.panorama %}
+                        <div class="shooting-type shooting-panorama">
+                          <span class="shooting-circle"></span>
+                          <span>Панорама</span>
+                          <i class="fa-solid fa-panorama"></i>
+                        </div>
+                      {% endif %}
+                      {% if request.overview %}
+                        <div class="shooting-type shooting-overview">
+                          <span class="shooting-circle"></span>
+                          <span>Обзорные фото</span>
+                          <i class="fas fa-camera"></i>
+                        </div>
+                      {% endif %}
                     </td>
-                    <td>{{ request.note }}</td>
+                    
+
+                    <td class="note-column">
+                      {{ request.note }}
+                  </td>
                     <td>{{ request.username }}</td>
                     <td>
                         {% if user.is_staff or user.id == request.user_id %}

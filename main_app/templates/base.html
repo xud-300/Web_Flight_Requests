@@ -65,6 +65,10 @@
             padding: 0 20px;
             box-sizing: border-box;
         }
+        header.bg-orange {
+            padding-top: 1.7rem !important;
+            padding-bottom: 1.7rem !important;
+            }
         .header-title {
             text-align: center;
             margin: 0;
@@ -77,24 +81,23 @@
             background-color: #1F2122;
         }
         .logout-button {
-            background-color: #3953DB;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
+            background-color: transparent; /* прозрачный фон по умолчанию */
+            border: 1px solid #3498db;       /* синяя рамка, можно выбрать нужный оттенок */
+            color: #3498db;                  /* текст синего цвета */
+            padding: 10px 20px;              /* отступы, можно подстроить */
             font-size: 1em;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            border-radius: 10px;
-            margin-top: 10px;
+            border-radius: 12px;             /* округлость */
+            transition: background-color 0.3s, color 0.3s;
         }
-        .logout-button i {
-            font-size: 1.2em;
-        }
+
         .logout-button:hover {
-            background-color: #2e44b0;
+            background-color: #3498db;       /* фон заполняется синим при наведении */
+            color: #fff;                     /* текст становится белым */
         }
+
         footer {
             background-color: #363940;
             padding: 10px 20px;
@@ -126,7 +129,7 @@
             {% block content %}{% endblock %}
         </main>
         <footer class="text-center py-4">
-            <p>&copy; 2024 Intics</p>
+            <p>&copy; 2025 Intix</p>
         </footer>
     </div>
     
