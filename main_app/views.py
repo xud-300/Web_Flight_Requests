@@ -224,6 +224,45 @@ def get_object_names(request):
     return JsonResponse(data, safe=False)
 
 
+# AJAX-обработчик для массового обновления статуса заявок.
+@require_POST
+@login_required
+def mass_update_status(request):
+    # Проверка прав администратора
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Доступ запрещен")
+
+    try:
+        data = json.loads(request.body)
+        request_ids = data.get('request_ids', [])
+        new_status = data.get('new_status')
+        
+        # Проверяем входные данные
+        if not request_ids or new_status not in ['новая', 'завершена']:
+            return JsonResponse({'success': False, 'error': 'Неверные параметры'})
+        
+        # Получаем все заявки, которые нужно обновить
+        qs = FlightRequest.objects.filter(id__in=request_ids)
+        
+        # Для каждой заявки обновляем статус и создаем запись истории
+        for flight_request in qs:
+            old_status = flight_request.status
+            flight_request.status = new_status
+            flight_request.save(update_fields=['status'])
+            
+            RequestHistory.objects.create(
+                flight_request=flight_request,
+                changed_by=request.user,
+                changes=json.dumps({'status': [old_status, new_status]}, ensure_ascii=False)
+            )
+        
+        return JsonResponse({'success': True})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+
 # Заглушки для экспорта заявок в Excel.
 class ExportExcelView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):

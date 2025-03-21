@@ -177,6 +177,15 @@
         </form>
       </div>
     </div>
+    {% if user.is_staff %}
+    <div id="massUpdatePanel" style="display: none;" class="card mb-3">
+      <div class="card-body">
+        <p id="massUpdateMessage"></p>
+        <button id="massUpdateButton" class="btn btn-primary">Обновить статус</button>
+        <button id="massUpdateCancelButton" class="btn btn-secondary ml-2">Сбросить выбор</button>
+      </div>
+    </div>
+    {% endif %}  
   </div>
 </div>
 
@@ -249,9 +258,17 @@
                 <tr>
                   <td>
                     {% if request.status|lower == "новая" %}
-                      <span class="badge badge-success">В работе</span>
+                      {% if user.is_staff %}
+                        <span class="badge badge-success selectable-status" data-request-id="{{ request.id }}">В работе</span>
+                      {% else %}
+                        <span class="badge badge-success">В работе</span>
+                      {% endif %}
                     {% elif request.status|lower == "завершена" %}
-                      <span class="badge badge-secondary">Выполнена</span>
+                      {% if user.is_staff %}
+                        <span class="badge badge-secondary selectable-status" data-request-id="{{ request.id }}">Выполнена</span>
+                      {% else %}
+                        <span class="badge badge-secondary">Выполнена</span>
+                      {% endif %}
                     {% else %}
                       {{ request.status }}
                     {% endif %}

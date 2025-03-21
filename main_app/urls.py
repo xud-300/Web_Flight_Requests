@@ -9,6 +9,7 @@ from .views import (
     ExportExcelView,
     ExportPDFView,
     delete_flight_request,
+    mass_update_status,
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path('requests/export/excel/', ExportExcelView.as_view(), name='export_excel'),
     path('requests/export/pdf/', ExportPDFView.as_view(), name='export_pdf'),
     path('requests/delete/<int:pk>/', delete_flight_request, name='request_delete'),
+    path('requests/mass_update_status/', mass_update_status, name='mass_update_status'),
 ]
