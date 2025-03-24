@@ -94,6 +94,11 @@ body {
   background-color: #eef3f8;
 }
 
+.table-hover tbody tr.disabled-row:hover {
+  background-color: inherit; /* или установите конкретный цвет, например, тот же, что для не-hover состояния */
+}
+
+
 /* Шапка таблицы */
 .table thead th {
   background-color: #2c3e50; /* или #34495e */
@@ -145,7 +150,7 @@ body {
 
 /* Выделение выбранной строки */
 tr.selected {
-  background-color: #e2e6ea; /* Светлый фон для выделенной строки */
+  background-color: #eef3f8; /* Светлый фон для выделенной строки */
   /* Можно добавить рамку или другие стили по вкусу */
 }
 
@@ -156,8 +161,22 @@ tr.selected {
 }
 
 .selectable-status:hover {
-  transform: scale(1.05);        /* Легкое увеличение при наведении */
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
+
+.selectable-status.active {
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  /* Если нужно, можно добавить transition, но его уже задали для .selectable-status */
+}
+
+.selectable-status.no-hover:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+
 
 /* Контейнер для вывода типа съёмки (кружок + текст + иконка). 
    Если нужен столбик — используйте display: block или flex-колонку. 
@@ -265,28 +284,7 @@ tr.selected {
 }
 
 
-/* Пример стилизации кнопки «Редактировать» */
-.btn-outline-primary {
-  border: 1px solid #3498db;
-  color: #3498db;
-  transition: all 0.3s ease;
-}
-.btn-outline-primary:hover {
-  background-color: #3498db;
-  color: #fff;
-}
 
-
-/* Кнопка "Редактировать" */
-.btn-sm.btn-outline-primary {
-  border-color: #3498db;
-  color: #3498db;
-  transition: 0.3s;
-}
-.btn-sm.btn-outline-primary:hover {
-  background-color: #3498db;
-  color: #fff;
-}
 
 /* Уменьшаем иконки сортировки (если нужно) */
 .fas.fa-sort-up, .fas.fa-sort-down {

@@ -178,14 +178,17 @@
       </div>
     </div>
     {% if user.is_staff %}
-    <div id="massUpdatePanel" style="display: none;" class="card mb-3">
-      <div class="card-body">
-        <p id="massUpdateMessage"></p>
-        <button id="massUpdateButton" class="btn btn-primary">Обновить статус</button>
-        <button id="massUpdateCancelButton" class="btn btn-secondary ml-2">Сбросить выбор</button>
+    <!-- Вместо "mb-3" можно использовать "my-3" -->
+    <div id="massUpdatePanel" class="collapse my-3">
+      <div class="card card-body">
+        <p id="massUpdateMessage" class="mb-2"></p>
+        <div class="d-flex">
+          <button id="massUpdateButton" class="btn btn-primary mr-2">Перевести в Выполнена</button>
+          <button id="massUpdateCancelButton" class="btn btn-secondary">Сбросить выбор</button>
+        </div>
       </div>
     </div>
-    {% endif %}  
+    {% endif %}
   </div>
 </div>
 
@@ -257,22 +260,29 @@
                 {% for request in requests %}
                 <tr>
                   <td>
-                    {% if request.status|lower == "новая" %}
-                      {% if user.is_staff %}
-                        <span class="badge badge-success selectable-status" data-request-id="{{ request.id }}">В работе</span>
+                    <div class="status-wrapper">
+                      {% if request.status|lower == "новая" %}
+                        {% if user.is_staff %}
+                          <span class="badge badge-success selectable-status" data-request-id="{{ request.id }}">В работе</span>
+                        {% else %}
+                          <span class="badge badge-success">В работе</span>
+                        {% endif %}
+                      {% elif request.status|lower == "завершена" %}
+                        {% if user.is_staff %}
+                          <span class="badge badge-secondary selectable-status" data-request-id="{{ request.id }}">Выполнена</span>
+                        {% else %}
+                          <span class="badge badge-secondary">Выполнена</span>
+                        {% endif %}
                       {% else %}
-                        <span class="badge badge-success">В работе</span>
+                        {{ request.status }}
                       {% endif %}
-                    {% elif request.status|lower == "завершена" %}
-                      {% if user.is_staff %}
-                        <span class="badge badge-secondary selectable-status" data-request-id="{{ request.id }}">Выполнена</span>
-                      {% else %}
-                        <span class="badge badge-secondary">Выполнена</span>
-                      {% endif %}
-                    {% else %}
-                      {{ request.status }}
-                    {% endif %}
+                      <!-- Элемент для галочки, по умолчанию скрыт -->
+                      <span class="selected-icon" style="display: none;">
+                        <i class="fas fa-check"></i>
+                      </span>
+                    </div>
                   </td>
+                  
                     <td>{{ request.id }}</td>
                     <td>{{ request.object_type.type_name }}</td>
                     <td>{{ request.object_name.object_name }}</td>

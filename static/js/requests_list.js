@@ -130,11 +130,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Массовое обновление статуса заявок для администратора ---
 
-    // Объявляем переменные для хранения выбранных заявок и выбранного статуса группы
     let selectedRequestIds = [];
-    let selectedGroupStatus = null;  // Значения: "В работе" или "Выполнена"
+    let selectedGroupStatus = null;
 
-    // Функция, которая отключает бейджи с противоположным статусом
     function disableOppositeBadges(selectedStatus) {
         document.querySelectorAll('.selectable-status').forEach(function(badge) {
             const rowStatus = badge.textContent.trim();
@@ -142,69 +140,82 @@ document.addEventListener('DOMContentLoaded', function() {
                 badge.classList.add('disabled-badge');
                 badge.style.pointerEvents = 'none';
                 badge.style.opacity = '0.5';
+                const row = badge.closest('tr');
+                if (row) {
+                    row.classList.add('disabled-row');
+                }
             }
         });
     }
 
-    // Функция для восстановления кликабельности всех бейджей
     function enableAllBadges() {
         document.querySelectorAll('.selectable-status').forEach(function(badge) {
             badge.classList.remove('disabled-badge');
             badge.style.pointerEvents = 'auto';
             badge.style.opacity = '1';
+            const row = badge.closest('tr');
+            if (row) {
+                row.classList.remove('disabled-row');
+            }
         });
     }
 
-    // Функция обновления панели массового обновления в зависимости от выбранного статуса
     function updateMassUpdatePanel(selectedStatus) {
         const massUpdateMessage = document.getElementById('massUpdateMessage');
         const massUpdateButton = document.getElementById('massUpdateButton');
         let newStatus = "";
+
         if (selectedStatus === "В работе") {
-            // Если выбраны заявки со статусом "В работе", действие – перевести их в "Выполнена"
             newStatus = "завершена";
             massUpdateMessage.textContent = "Вы выбрали заявки со статусом 'В работе'. Нажмите кнопку, чтобы перевести их в статус 'Выполнена'.";
             massUpdateButton.textContent = "Перевести в Выполнена";
         } else if (selectedStatus === "Выполнена") {
-            // Если выбраны заявки со статусом "Выполнена", действие – перевести их в "В работе"
             newStatus = "новая";
             massUpdateMessage.textContent = "Вы выбрали заявки со статусом 'Выполнена'. Нажмите кнопку, чтобы перевести их в статус 'В работе'.";
             massUpdateButton.textContent = "Перевести в В работе";
         }
+
         massUpdateButton.setAttribute('data-new-status', newStatus);
     }
 
-    // Функция скрытия панели массового обновления
-    function hideMassUpdatePanel() {
-        const massUpdatePanel = document.getElementById('massUpdatePanel');
-        if(massUpdatePanel) {
-            massUpdatePanel.style.display = 'none';
-        }
+    // Показываем панель анимацией
+    function showMassUpdatePanel() {
+        $('#massUpdatePanel').collapse('show');
     }
 
-    // Обработчик клика по кликабельным бейджам (элементы с классом "selectable-status")
+    // Скрываем панель анимацией
+    function hideMassUpdatePanel() {
+        $('#massUpdatePanel').collapse('hide');
+    }
+
+    // При клике на бейдж статуса
     document.querySelectorAll('.selectable-status').forEach(function(badge) {
         badge.addEventListener('click', function(event) {
             const requestId = badge.getAttribute('data-request-id');
             const row = badge.closest('tr');
             const rowStatus = badge.textContent.trim();
-
-            // Если ещё не выбрана группа, запоминаем статус выбранной заявки и отключаем противоположные бейджи
+    
             if (!selectedGroupStatus) {
                 selectedGroupStatus = rowStatus;
                 disableOppositeBadges(selectedGroupStatus);
                 updateMassUpdatePanel(selectedGroupStatus);
             }
-
-            // Если статус строки не совпадает с выбранной группой, игнорируем клик
+    
             if (rowStatus !== selectedGroupStatus) {
                 return;
             }
-
-            // Переключаем выделение строки
+    
+            // Переключаем выделение строки и класса "active" у бейджа
             if (row.classList.contains('selected')) {
                 row.classList.remove('selected');
                 selectedRequestIds = selectedRequestIds.filter(id => id !== requestId);
+                badge.classList.remove('active');
+                // Добавляем временно класс no-hover, чтобы убрать эффект hover после снятия выбора
+                badge.classList.add('no-hover');
+                setTimeout(function() {
+                    badge.classList.remove('no-hover');
+                }, 300);
+                // Если больше ни одна заявка не выбрана, сбрасываем группу и скрываем панель
                 if (selectedRequestIds.length === 0) {
                     selectedGroupStatus = null;
                     enableAllBadges();
@@ -213,19 +224,21 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 row.classList.add('selected');
                 selectedRequestIds.push(requestId);
+                badge.classList.add('active');
             }
-
-            // Отображаем или скрываем панель массового обновления в зависимости от количества выбранных заявок
-            const massUpdatePanel = document.getElementById('massUpdatePanel');
+            
+            // Показываем панель, если выбраны заявки; иначе — скрываем
             if (selectedRequestIds.length > 0) {
-                massUpdatePanel.style.display = 'block';
+                showMassUpdatePanel();
             } else {
-                massUpdatePanel.style.display = 'none';
+                hideMassUpdatePanel();
             }
+            
         });
     });
+    
 
-    // Обработчик кнопки обновления статуса
+    // Обработчик кнопки "Обновить статус"
     const massUpdateButton = document.getElementById('massUpdateButton');
     if (massUpdateButton) {
         massUpdateButton.addEventListener('click', function(event) {
@@ -234,7 +247,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Невозможно определить новый статус.');
                 return;
             }
-            // Получаем CSRF-токен (убедись, что он есть в шаблоне)
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             fetch('/main_app/requests/mass_update_status/', {
                 method: 'POST',
@@ -256,7 +268,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 if (data.success) {
-                    // Обновляем бейджи для каждой выбранной заявки
                     selectedRequestIds.forEach(function(id) {
                         const badge = document.querySelector('.selectable-status[data-request-id="' + id + '"]');
                         if (badge) {
@@ -269,11 +280,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 badge.classList.remove('badge-secondary');
                                 badge.classList.add('badge-success');
                             }
+                            // Получаем строку через .closest('tr')
+                            const row = badge.closest('tr');
+                            row.classList.remove('selected');
                         }
-                        const row = badge.closest('tr');
-                        row.classList.remove('selected');
                     });
-                    // Сброс состояния
+                    // Сброс
                     selectedRequestIds = [];
                     selectedGroupStatus = null;
                     enableAllBadges();
@@ -289,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Обработчик кнопки отмены выбора
+    // Обработчик кнопки "Сбросить выбор"
     const massUpdateCancelButton = document.getElementById('massUpdateCancelButton');
     if (massUpdateCancelButton) {
         massUpdateCancelButton.addEventListener('click', function(event) {
