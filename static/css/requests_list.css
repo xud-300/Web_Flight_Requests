@@ -122,6 +122,64 @@ body {
   padding: 0.75rem;
 }
 
+/* Ссылки в шапке таблицы (thead) */
+.table thead th a {
+  color: #fff;                /* Белый цвет текста */
+  text-decoration: none;      /* Без подчёркивания */
+  transition: color 0.2s ease;
+  display: inline-flex;        /* текст + иконка в одну линию */
+  align-items: center;         /* выравниваем иконку по центру */
+  white-space: nowrap;   
+}
+
+/* При наведении меняем цвет на светло-серый */
+.table thead th a:hover {
+  color: #6c757d;                /* Серый при hover */
+  text-decoration: none;
+}
+
+/* Стили для иконок сортировки */
+.sort-icon {
+  margin-left: 4px;
+  transition: opacity 0.2s ease;
+  /* Если столбец отсортирован, иконка уже видна (выше в шаблоне) */
+  /* Можем указать opacity: 0.6, чтобы была полупрозрачной */
+  opacity: 0.6;
+}
+
+/* Иконка "fa-sort" по умолчанию скрыта (или почти скрыта), 
+   если столбец не отсортирован. */
+.default-sort-icon {
+  opacity: 0; /* полностью скрыта */
+}
+
+/* При наведении на ссылку (название столбца) 
+   показываем/делаем ярче иконку */
+.table thead th a:hover .sort-icon {
+  opacity: 1; /* иконка становится полностью видимой */
+  white-space: nowrap;
+}
+
+/* Аналогично, если иконка была default-sort-icon, 
+   она при hover тоже становится видимой. */
+.table thead th a:hover .default-sort-icon {
+  opacity: 0.6; /* или 1, если хотите */
+}
+
+
+/* Иконки сортировки внутри ссылок */
+.table thead th a i {
+  opacity: 0.6;               /* Полупрозрачная иконка по умолчанию */
+  transition: opacity 0.2s ease;
+  margin-left: 4px;           /* Небольшой отступ от текста */
+}
+
+/* При наведении на ссылку иконка становится полностью видимой */
+.table thead th a:hover i {
+  opacity: 1;
+}
+
+
 /* «Пилюльные» бейджи */
 .badge {
   font-size: 0.8rem;
@@ -130,23 +188,30 @@ body {
   /* при необходимости меняйте цвет, фон и т.д. */
 }
 
-/* Бейджи статуса "новая" (badge-success) */
+/* Пример стилей для бейджей по статусам */
 .badge-success {
-  background-color: #28a745; 
-  color: #fff;
-  padding: 0.4rem 0.8rem;  /* чуть больше отступы */
-  border-radius: 14px;     /* чуть более скруглённые углы */
-  font-size: 0.9rem;       /* немного увеличиваем шрифт */
-}
-
-/* Бейджи статуса "завершена" (badge-secondary) */
-.badge-secondary {
-  background-color: #6c757d;  
+  background-color: #28a745; /* Зеленый для "Новая" или "В работе" */
   color: #fff;
   padding: 0.4rem 0.8rem;
   border-radius: 14px;
-  font-size: 0.9rem;
+  font-size: 0.9rem; 
 }
+.badge-primary {
+  background-color: #3498db; /* Синий для "В работе", если требуется */
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 14px;
+  font-size: 0.9rem; 
+}
+.badge-secondary {
+  background-color: #6c757d; /* Серый для "Выполнена" */
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 14px;
+  font-size: 0.9rem; 
+}
+
+
 
 /* Выделение выбранной строки */
 tr.selected {

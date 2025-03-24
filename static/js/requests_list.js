@@ -162,21 +162,122 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateMassUpdatePanel(selectedStatus) {
         const massUpdateMessage = document.getElementById('massUpdateMessage');
-        const massUpdateButton = document.getElementById('massUpdateButton');
-        let newStatus = "";
-
-        if (selectedStatus === "В работе") {
-            newStatus = "завершена";
-            massUpdateMessage.textContent = "Вы выбрали заявки со статусом 'В работе'. Нажмите кнопку, чтобы перевести их в статус 'Выполнена'.";
-            massUpdateButton.textContent = "Перевести в Выполнена";
-        } else if (selectedStatus === "Выполнена") {
-            newStatus = "новая";
-            massUpdateMessage.textContent = "Вы выбрали заявки со статусом 'Выполнена'. Нажмите кнопку, чтобы перевести их в статус 'В работе'.";
-            massUpdateButton.textContent = "Перевести в В работе";
+        const buttonsContainer = document.getElementById('massUpdateButtons');
+    
+        // Очищаем контейнер кнопок
+        buttonsContainer.innerHTML = '';
+    
+        // Формируем сообщение, например, "Выбраны 3 заявки со статусом «В работе». Выберите действие:"
+        massUpdateMessage.innerHTML = `Выбраны ${selectedRequestIds.length} заявок со статусом <strong>${selectedStatus}</strong>. Выберите действие:`;
+    
+        // Дальше — генерируем кнопки для перевода статуса
+        if (selectedStatus === "Новая") {
+            const btnWork = document.createElement('button');
+            btnWork.className = 'btn btn-primary mr-2';
+            btnWork.innerHTML = "Перевести в <strong>'В работе'</strong>";
+            btnWork.setAttribute('data-new-status', 'В работе');
+            buttonsContainer.appendChild(btnWork);
+        } 
+        else if (selectedStatus === "В работе") {
+            const btnDone = document.createElement('button');
+            btnDone.className = 'btn btn-primary mr-2';
+            btnDone.innerHTML = "Перевести в <strong>'Выполнена'</strong>";
+            btnDone.setAttribute('data-new-status', 'Выполнена');
+            buttonsContainer.appendChild(btnDone);
+    
+            const btnNew = document.createElement('button');
+            btnNew.className = 'btn btn-primary mr-2';
+            btnNew.innerHTML = "Перевести в <strong>'Новая'</strong>";
+            btnNew.setAttribute('data-new-status', 'Новая');
+            buttonsContainer.appendChild(btnNew);
         }
-
-        massUpdateButton.setAttribute('data-new-status', newStatus);
+        else if (selectedStatus === "Выполнена") {
+            const btnWork = document.createElement('button');
+            btnWork.className = 'btn btn-primary mr-2';
+            btnWork.innerHTML = "Перевести в <strong>'В работе'</strong>";
+            btnWork.setAttribute('data-new-status', 'В работе');
+            buttonsContainer.appendChild(btnWork);
+    
+            const btnNew = document.createElement('button');
+            btnNew.className = 'btn btn-primary mr-2';
+            btnNew.innerHTML = "Перевести в <strong>'Новая'</strong>";
+            btnNew.setAttribute('data-new-status', 'Новая');
+            buttonsContainer.appendChild(btnNew);
+        }
+    
+        // Привязываем обработчики к этим кнопкам
+        buttonsContainer.querySelectorAll('button').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const newStatus = btn.getAttribute('data-new-status');
+                massUpdateStatusAjax(newStatus);
+            });
+        });
     }
+    
+    
+    // Функция для отправки AJAX-запроса на массовое обновление статуса
+function massUpdateStatusAjax(newStatus) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    fetch('/main_app/requests/mass_update_status/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            request_ids: selectedRequestIds,
+            new_status: newStatus
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Ошибка обновления статуса');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Обновляем отображение статуса в таблице
+            selectedRequestIds.forEach(function(id) {
+                const badge = document.querySelector('.selectable-status[data-request-id="' + id + '"]');
+                if (badge) {
+                    if (newStatus === 'В работе') {
+                        // Устанавливаем для "В работе" – синий
+                        badge.textContent = 'В работе';
+                        badge.classList.remove('badge-success', 'badge-secondary');
+                        badge.classList.add('badge-primary');
+                    } else if (newStatus === 'Выполнена') {
+                        badge.textContent = 'Выполнена';
+                        badge.classList.remove('badge-success', 'badge-primary');
+                        badge.classList.add('badge-secondary');
+                    } else if (newStatus === 'Новая') {
+                        badge.textContent = 'Новая';
+                        badge.classList.remove('badge-primary', 'badge-secondary');
+                        badge.classList.add('badge-success');
+                    }
+                    
+                    const row = badge.closest('tr');
+                    if (row) {
+                        row.classList.remove('selected');
+                    }
+                }
+            });
+            // Сброс выделения
+            selectedRequestIds = [];
+            selectedGroupStatus = null;
+            enableAllBadges();
+            hideMassUpdatePanel();
+        } else {
+            alert('Ошибка обновления: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        alert('Произошла ошибка при обновлении статуса.');
+    });
+}
+    
 
     // Показываем панель анимацией
     function showMassUpdatePanel() {
@@ -205,17 +306,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
     
-            // Переключаем выделение строки и класса "active" у бейджа
             if (row.classList.contains('selected')) {
                 row.classList.remove('selected');
                 selectedRequestIds = selectedRequestIds.filter(id => id !== requestId);
                 badge.classList.remove('active');
-                // Добавляем временно класс no-hover, чтобы убрать эффект hover после снятия выбора
                 badge.classList.add('no-hover');
                 setTimeout(function() {
                     badge.classList.remove('no-hover');
                 }, 300);
-                // Если больше ни одна заявка не выбрана, сбрасываем группу и скрываем панель
                 if (selectedRequestIds.length === 0) {
                     selectedGroupStatus = null;
                     enableAllBadges();
@@ -226,16 +324,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedRequestIds.push(requestId);
                 badge.classList.add('active');
             }
-            
-            // Показываем панель, если выбраны заявки; иначе — скрываем
+    
             if (selectedRequestIds.length > 0) {
                 showMassUpdatePanel();
+                updateMassUpdatePanel(selectedGroupStatus);
             } else {
                 hideMassUpdatePanel();
             }
-            
         });
     });
+    
     
 
     // Обработчик кнопки "Обновить статус"
@@ -271,11 +369,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectedRequestIds.forEach(function(id) {
                         const badge = document.querySelector('.selectable-status[data-request-id="' + id + '"]');
                         if (badge) {
-                            if (newStatus === 'завершена') {
+                            if (newStatus === 'Выполнена') {
                                 badge.textContent = 'Выполнена';
                                 badge.classList.remove('badge-success');
                                 badge.classList.add('badge-secondary');
-                            } else if (newStatus === 'новая') {
+                            } else if (newStatus === 'В работе') {
                                 badge.textContent = 'В работе';
                                 badge.classList.remove('badge-secondary');
                                 badge.classList.add('badge-success');
@@ -302,16 +400,99 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Обработчик кнопки "Сбросить выбор"
-    const massUpdateCancelButton = document.getElementById('massUpdateCancelButton');
-    if (massUpdateCancelButton) {
-        massUpdateCancelButton.addEventListener('click', function(event) {
+    const massResetButton = document.getElementById('massResetButton');
+    if (massResetButton) {
+        massResetButton.addEventListener('click', function(event) {
+            // 1. Убираем класс 'selected' у всех строк
             document.querySelectorAll('tr.selected').forEach(function(row) {
                 row.classList.remove('selected');
             });
+            // 2. Убираем класс 'active' у всех бейджей
+            document.querySelectorAll('.selectable-status.active').forEach(function(badge) {
+                badge.classList.remove('active');
+            });
+            // 3. Сбрасываем массив выбранных заявок и статус группы
             selectedRequestIds = [];
             selectedGroupStatus = null;
+            // 4. Восстанавливаем кликабельность всех бейджей
             enableAllBadges();
+            // 5. Скрываем панель массового обновления
             hideMassUpdatePanel();
         });
     }
+    
+
+    // Пример JS-обработчика
+    const massDeleteButton = document.getElementById('massDeleteButton');
+    if (massDeleteButton) {
+        massDeleteButton.addEventListener('click', function() {
+            // 1. Проверяем, выбраны ли заявки
+            if (selectedRequestIds.length === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Ничего не выбрано',
+                    text: 'Вы не выбрали ни одной заявки для удаления.'
+                });
+                return;
+            }
+
+            // 2. Показываем окно подтверждения
+            Swal.fire({
+                title: 'Удалить заявки?',
+                text: "Вы уверены, что хотите удалить выбранные заявки?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Да, удалить',
+                cancelButtonText: 'Отмена'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // 3. Если пользователь нажал "Да, удалить", отправляем запрос
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                    fetch('/main_app/requests/mass_delete/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ request_ids: selectedRequestIds })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Ошибка при удалении заявок');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Заявки удалены',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Ошибка',
+                                text: data.error || "Не удалось удалить заявки."
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Ошибка при удалении заявок:", error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка',
+                            text: error.message
+                        });
+                    });
+                }
+            });
+        });
+    }
+
+
 });

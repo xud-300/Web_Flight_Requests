@@ -71,7 +71,7 @@ class FlightRequest(models.Model):
     shoot_date_to = models.DateField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)
     kml_file_id = models.TextField(null=True, blank=True)
-    status = models.CharField(max_length=50, default='новая')
+    status = models.CharField(max_length=50, default='Новая')
     created_at = models.DateTimeField(auto_now_add=True)
     orthophoto = models.BooleanField(default=False)
     laser = models.BooleanField(default=False)

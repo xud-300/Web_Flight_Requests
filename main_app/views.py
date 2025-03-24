@@ -158,7 +158,7 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
         context['edit_url'] = reverse_lazy('request_edit', args=[self.object.id])
         # Вычисляем флаг редактируемости:
         # Если статус заявки "завершена" и пользователь не администратор, то редактирование запрещено.
-        context['is_editable'] = (self.object.status != "завершена") or (self.request.user.is_staff or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin'))
+        context['is_editable'] = (self.object.status != "Выполнена") or (self.request.user.is_staff or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin'))
         return context
 
     def get(self, request, *args, **kwargs):
@@ -174,7 +174,7 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
         # Добавляем поле 'status' только для администраторов (через is_staff или профиль)
         if self.request.user.is_staff or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin'):
             form.fields['status'] = forms.ChoiceField(
-                choices=[('новая', 'Новая'), ('завершена', 'Завершена')],
+                choices=[('Новая', 'Новая'), ('В работе', 'В работе'), ('Выполнена', 'Выполнена')],
                 initial=self.object.status,
                 widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_edit_status'})
             )
@@ -228,23 +228,18 @@ def get_object_names(request):
 @require_POST
 @login_required
 def mass_update_status(request):
-    # Проверка прав администратора
     if not request.user.is_staff:
         return HttpResponseForbidden("Доступ запрещен")
-
     try:
         data = json.loads(request.body)
         request_ids = data.get('request_ids', [])
         new_status = data.get('new_status')
         
-        # Проверяем входные данные
-        if not request_ids or new_status not in ['новая', 'завершена']:
+        # Допустимые варианты статуса:
+        if not request_ids or new_status not in ['Новая', 'В работе', 'Выполнена']:
             return JsonResponse({'success': False, 'error': 'Неверные параметры'})
         
-        # Получаем все заявки, которые нужно обновить
         qs = FlightRequest.objects.filter(id__in=request_ids)
-        
-        # Для каждой заявки обновляем статус и создаем запись истории
         for flight_request in qs:
             old_status = flight_request.status
             flight_request.status = new_status
@@ -260,6 +255,25 @@ def mass_update_status(request):
     
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+# AJAX-обработчик для массового удаления заявок.
+@require_POST
+@login_required
+def mass_delete_requests(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Доступ запрещен")
+    try:
+        data = json.loads(request.body)
+        request_ids = data.get('request_ids', [])
+        if not request_ids:
+            return JsonResponse({'success': False, 'error': 'Нет заявок для удаления'})
+        
+        FlightRequest.objects.filter(id__in=request_ids).delete()
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
 
 
 

@@ -10,6 +10,7 @@ from .views import (
     ExportPDFView,
     delete_flight_request,
     mass_update_status,
+    mass_delete_requests,
 )
 
 urlpatterns = [
@@ -21,4 +22,5 @@ urlpatterns = [
     path('requests/export/pdf/', ExportPDFView.as_view(), name='export_pdf'),
     path('requests/delete/<int:pk>/', delete_flight_request, name='request_delete'),
     path('requests/mass_update_status/', mass_update_status, name='mass_update_status'),
+    path('requests/mass_delete/', mass_delete_requests, name='mass_delete_requests'),
 ]

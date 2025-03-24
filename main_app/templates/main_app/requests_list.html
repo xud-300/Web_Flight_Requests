@@ -72,8 +72,9 @@
             <label for="statusFilter" class="mr-2 font-weight-bold">Статус:</label>
             <select id="statusFilter" name="status" class="form-control">
               <option value="">Все</option>
-              <option value="новая" {% if request.GET.status == "новая" %}selected{% endif %}>Новая</option>
-              <option value="завершена" {% if request.GET.status == "завершена" %}selected{% endif %}>Завершена</option>
+              <option value="Новая" {% if request.GET.status == "Новая" %}selected{% endif %}>Новая</option>
+              <option value="В работе" {% if request.GET.status == "В работе" %}selected{% endif %}>В работе</option>
+              <option value="Выполнена" {% if request.GET.status == "Выполнена" %}selected{% endif %}>Выполнена</option>
             </select>
           </div>
 
@@ -178,17 +179,39 @@
       </div>
     </div>
     {% if user.is_staff %}
-    <!-- Вместо "mb-3" можно использовать "my-3" -->
+    <!-- Панель массового обновления -->
     <div id="massUpdatePanel" class="collapse my-3">
-      <div class="card card-body">
-        <p id="massUpdateMessage" class="mb-2"></p>
-        <div class="d-flex">
-          <button id="massUpdateButton" class="btn btn-primary mr-2">Перевести в Выполнена</button>
-          <button id="massUpdateCancelButton" class="btn btn-secondary">Сбросить выбор</button>
+      <div class="card card-body py-2">
+        <!-- Общий контейнер: сообщение слева, кнопки справа -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap">
+          
+          <!-- Сообщение, где укажем статус и (опционально) количество заявок -->
+          <p id="massUpdateMessage" class="mb-0 mr-3" style="font-weight: 500;"></p>
+          
+          <!-- Блок кнопок справа -->
+          <div class="d-flex align-items-center flex-wrap">
+            
+            <!-- Динамические кнопки для перевода статуса -->
+            <div id="massUpdateButtons" class="mr-2"></div>
+            
+            <!-- Кнопка "Сбросить выбор" -->
+            <button id="massResetButton" class="btn btn-outline-secondary btn-sm mr-2">
+              <i class="fas fa-undo-alt"></i> Сбросить выбор
+            </button>
+            
+            <!-- Кнопка "Удалить заявку(и)" -->
+            <button id="massDeleteButton" class="btn btn-outline-danger btn-sm">
+              <i class="fas fa-trash"></i> Удалить
+            </button>
+          </div>
+          
         </div>
       </div>
     </div>
+
     {% endif %}
+    
+   
   </div>
 </div>
 
@@ -199,83 +222,89 @@
         <table class="table table-bordered table-hover">
             <thead class="thead-dark">
                 <tr>
-                    <th>
+                      <th>
                         <a href="?sort=status&order={% if request.GET.sort == 'status' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
                             Статус
                             {% if request.GET.sort == 'status' %}
                                 {% if request.GET.order == 'asc' %}
-                                    <i class="fas fa-sort-up"></i>
+                                    <!-- Отсортировано по возрастанию -->
+                                    <i class="fas fa-sort-up sort-icon"></i>
                                 {% else %}
-                                    <i class="fas fa-sort-down"></i>
+                                    <!-- Отсортировано по убыванию -->
+                                    <i class="fas fa-sort-down sort-icon"></i>
                                 {% endif %}
+                            {% else %}
+                                <!-- Не отсортировано: показываем fa-sort, но скрываем до hover (через CSS) -->
+                                <i class="fas fa-sort sort-icon default-sort-icon"></i>
                             {% endif %}
                         </a>
-                    </th>
-                    <th>
+                      </th>
+                      <th>
                         <a href="?sort=id&order={% if request.GET.sort == 'id' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
                             №
                             {% if request.GET.sort == 'id' %}
                                 {% if request.GET.order == 'asc' %}
-                                    <i class="fas fa-sort-up"></i>
+                                    <i class="fas fa-sort-up sort-icon"></i>
                                 {% else %}
-                                    <i class="fas fa-sort-down"></i>
+                                    <i class="fas fa-sort-down sort-icon"></i>
                                 {% endif %}
+                            {% else %}
+                                <i class="fas fa-sort sort-icon default-sort-icon"></i>
                             {% endif %}
                         </a>
-                    </th>
-                    <th>
+                      </th>
+                      <th>
                         <a href="?sort=object_type&order={% if request.GET.sort == 'object_type' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
                             Тип объекта
                             {% if request.GET.sort == 'object_type' %}
                                 {% if request.GET.order == 'asc' %}
-                                    <i class="fas fa-sort-up"></i>
+                                    <i class="fas fa-sort-up sort-icon"></i>
                                 {% else %}
-                                    <i class="fas fa-sort-down"></i>
+                                    <i class="fas fa-sort-down sort-icon"></i>
                                 {% endif %}
+                            {% else %}
+                                <i class="fas fa-sort sort-icon default-sort-icon"></i>
                             {% endif %}
                         </a>
-                    </th>
+                      </th>
                     <th>Название объекта</th>
                     <th>Пикеты</th>
                     <th>
-                        <a href="?sort=shoot_date&order={% if request.GET.sort == 'shoot_date' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
-                            Дата съемки
-                            {% if request.GET.sort == 'shoot_date' %}
-                                {% if request.GET.order == 'asc' %}
-                                    <i class="fas fa-sort-up"></i>
-                                {% else %}
-                                    <i class="fas fa-sort-down"></i>
-                                {% endif %}
-                            {% endif %}
-                        </a>
+                      <a href="?sort=shoot_date&order={% if request.GET.sort == 'shoot_date' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">
+                          Дата съемки
+                          {% if request.GET.sort == 'shoot_date' %}
+                              {% if request.GET.order == 'asc' %}
+                                  <i class="fas fa-sort-up sort-icon"></i>
+                              {% else %}
+                                  <i class="fas fa-sort-down sort-icon"></i>
+                              {% endif %}
+                          {% else %}
+                              <i class="fas fa-sort sort-icon default-sort-icon"></i>
+                          {% endif %}
+                      </a>
                     </th>
                     <th>Тип съемки</th>
                     <th class="note-column">Примечание</th>
                     <th>Создатель</th>
                     <th>Изменить</th>
                 </tr>
-            </thead>
-            
+            </thead>            
             <tbody>
                 {% for request in requests %}
                 <tr>
                   <td>
                     <div class="status-wrapper">
                       {% if request.status|lower == "новая" %}
-                        {% if user.is_staff %}
-                          <span class="badge badge-success selectable-status" data-request-id="{{ request.id }}">В работе</span>
-                        {% else %}
-                          <span class="badge badge-success">В работе</span>
-                        {% endif %}
-                      {% elif request.status|lower == "завершена" %}
-                        {% if user.is_staff %}
-                          <span class="badge badge-secondary selectable-status" data-request-id="{{ request.id }}">Выполнена</span>
-                        {% else %}
-                          <span class="badge badge-secondary">Выполнена</span>
-                        {% endif %}
+                        <span class="badge badge-success selectable-status" data-request-id="{{ request.id }}">Новая</span>
+                      {% elif request.status|lower == "в работе" %}
+                        <span class="badge badge-primary selectable-status" data-request-id="{{ request.id }}">В работе</span>
+                      {% elif request.status|lower == "выполнена" %}
+                        <span class="badge badge-secondary selectable-status" data-request-id="{{ request.id }}">Выполнена</span>
                       {% else %}
                         {{ request.status }}
                       {% endif %}
+                    
+                  
                       <!-- Элемент для галочки, по умолчанию скрыт -->
                       <span class="selected-icon" style="display: none;">
                         <i class="fas fa-check"></i>

@@ -106,8 +106,9 @@
     <div class="form-group">
       <label for="id_edit_status">Статус заявки:</label>
       <select id="id_edit_status" name="status" class="form-control">
-        <option value="новая" {% if object.status == 'новая' %}selected{% endif %}>Новая</option>
-        <option value="завершена" {% if object.status == 'завершена' %}selected{% endif %}>Завершена</option>
+        <option value="Новая" {% if object.status == 'Новая' %}selected{% endif %}>Новая</option>
+        <option value="В работе" {% if object.status == 'В работе' %}selected{% endif %}>В работе</option>
+        <option value="Выполнена" {% if object.status == 'Выполнена' %}selected{% endif %}>Выполнена</option>
       </select>
     </div>
     {% endif %}
