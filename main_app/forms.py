@@ -88,7 +88,7 @@ class FlightRequestCreateForm(forms.ModelForm):
 
         piket_errors = []
 
-        # Если тип != "Городок" (id != "4"), тогда проверяем поля
+        # Если тип объекта не "Городок" (id != "4"), тогда проверяем поля
         if object_type and str(object_type.id) != "4":
             # 1) Проверка на пустые поля
             if piket_from is None:
@@ -96,23 +96,25 @@ class FlightRequestCreateForm(forms.ModelForm):
             if piket_to is None:
                 piket_errors.append('"Пикет до" обязателен для заполнения.')
 
-            # 2) Проверка на отрицательные значения, нецелые и т.д.
+            # 2) Проверка на отрицательные значения и тип данных
             if piket_from is not None:
                 if piket_from < 0:
                     piket_errors.append('"Пикет от" не может быть меньше 0.')
                 if not isinstance(piket_from, int):
                     piket_errors.append('"Пикет от" должен быть целым числом.')
-
             if piket_to is not None:
                 if piket_to < 0:
                     piket_errors.append('"Пикет до" не может быть меньше 0.')
                 if not isinstance(piket_to, int):
                     piket_errors.append('"Пикет до" должен быть целым числом.')
 
-            # 3) Сравнение "Пикет от" > "Пикет до"
+            # 3) Проверка, что "Пикет от" не больше "Пикета до"
             if (piket_from is not None) and (piket_to is not None):
                 if piket_from > piket_to:
                     piket_errors.append('"Пикет от" не может быть больше "Пикета до".')
+                # 4) Проверка, что оба поля не равны нулю одновременно
+                if piket_from == 0 and piket_to == 0:
+                    piket_errors.append('Оба поля "Пикет от" и "Пикет до" не могут одновременно равняться нулю.')
 
         # Если в итоге есть какие-то ошибки по пикетам:
         if piket_errors:

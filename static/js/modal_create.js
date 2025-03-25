@@ -14,53 +14,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const objectTypeSelect = document.getElementById('id_object_type');
     const objectNameSelect = document.getElementById('id_object_name');
     const piketFrom = document.getElementById('id_piket_from');
-    const piketTo = document.getElementById('id_piket_to');
-
-    if (piketFrom) {
-        piketFrom.addEventListener('input', function() {
-            // Очищаем общий блок ошибок внутри контейнера пикетов
-            const container = document.getElementById('piketContainer');
-            if (container) {
-                container.innerHTML = container.querySelector('.form-inline').outerHTML;
-            }
-        });
-    }
-    if (piketTo) {
-        piketTo.addEventListener('input', function() {
-            const container = document.getElementById('piketContainer');
-            if (container) {
-                container.innerHTML = container.querySelector('.form-inline').outerHTML;
-            }
-        });
-    }
-    
+    const piketTo = document.getElementById('id_piket_to');    
 
     // Динамическая подгрузка названий объектов и логика исключений
     if (objectTypeSelect) {
         objectTypeSelect.addEventListener('change', function() {
             const selectedValue = this.value;
             console.log("Выбран тип объекта:", selectedValue);
-
-            // Если тип не выбран, сбрасываем состояние всех полей
+    
+            // Сброс состояния: делаем поле "Название объекта" активным и устанавливаем дефолтный текст
+            objectNameSelect.disabled = false;
+            objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+            // Включаем поля пикетов и устанавливаем стандартные placeholder
+            if (piketFrom) {
+                piketFrom.disabled = false;
+                piketFrom.placeholder = "0";
+            }
+            if (piketTo) {
+                piketTo.disabled = false;
+                piketTo.placeholder = "100";
+            }
+    
+            // Если тип не выбран – выходим
             if (!selectedValue) {
-                objectNameSelect.disabled = false;
-                objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-                if (piketFrom) piketFrom.disabled = false;
-                if (piketTo) piketTo.disabled = false;
                 return;
             }
-
-            // Если выбран тип "ЖД" (object_type == 2), отключаем поле "Название объекта"
+    
+            // Если выбран тип "ЖД" (object_type == "2")
             if (selectedValue === "2") {
                 objectNameSelect.disabled = true;
                 objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
-                // Убираем класс ошибки с поля "Название объекта"
                 objectNameSelect.classList.remove('is-invalid');
-                // Удаляем любые связанные элементы с ошибкой внутри ближайшего контейнера формы
                 $(objectNameSelect).closest('.form-group').find('.invalid-feedback').remove();
             } else {
+                // Для остальных типов делаем AJAX-подгрузку названий
                 objectNameSelect.disabled = false;
-                // Выполняем AJAX-запрос для динамической подгрузки названий объектов
                 if (!window.getObjectNamesUrl) {
                     console.error("window.getObjectNamesUrl не определена!");
                     return;
@@ -86,8 +74,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
             }
-
-            // Если выбран тип "Городок" (object_type == 4), отключаем поля пикетов; иначе включаем их
+    
+            // Если выбран тип "Городок" (object_type == "4"), отключаем поля пикетов; иначе, включаем их
             if (selectedValue === "4") {
                 if (piketFrom) {
                     piketFrom.disabled = true;
@@ -99,10 +87,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     piketTo.value = "";
                     piketTo.placeholder = "";
                 }
-                // Удаляем общий блок ошибки для пикетов
-                const container = document.getElementById('piketContainer');
-                if (container) {
-                    container.innerHTML = container.querySelector('.form-inline').outerHTML;
+                // Вместо полной перезаписи контейнера удаляем только ошибку
+                const errorSpace = document.getElementById('piketErrorSpace');
+                if (errorSpace) {
+                    errorSpace.innerHTML = "";
                 }
             } else {
                 if (piketFrom) {
@@ -114,9 +102,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     piketTo.placeholder = "100";
                 }
             }
-            
         });
     }
+    
 
 
     const createDateRangeInput = document.getElementById('id_create_date_range');
