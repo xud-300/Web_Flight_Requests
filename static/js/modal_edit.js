@@ -49,6 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 objectNameSelect.disabled = true;
                 objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
                 // Пикеты при "ЖД" остаются включёнными
+            
+                // <--- ДОБАВЛЯЕМ ОЧИСТКУ ОШИБОК --->
+                clearFieldError(objectTypeSelect);
+                clearFieldError(objectNameSelect);
+            
                 return;
             }
     
@@ -252,6 +257,89 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+
+    // Функция для инициализации Date Range Picker в окне редактирования
+    function attachEditDateRangePicker() {
+        const editDateRangeInput = document.getElementById('id_edit_date_range');
+        if (!editDateRangeInput) return; // Если элемент не найден, выходим
+
+        // Получаем скрытые поля с датами
+        const shootDateFromEl = document.getElementById('id_edit_shoot_date_from');
+        const shootDateToEl = document.getElementById('id_edit_shoot_date_to');
+        let startDate = moment();
+        let endDate = moment();
+
+        // Если в скрытых полях уже есть значения, используем их для инициализации
+        if (shootDateFromEl && shootDateFromEl.value) {
+            startDate = moment(shootDateFromEl.value, 'YYYY-MM-DD');
+        }
+        if (shootDateToEl && shootDateToEl.value) {
+            endDate = moment(shootDateToEl.value, 'YYYY-MM-DD');
+        }
+
+        // Инициализация Date Range Picker с нужными опциями
+        $('#id_edit_date_range').daterangepicker({
+            autoApply: true,
+            autoUpdateInput: false,
+            startDate: startDate,
+            endDate: endDate,
+            locale: {
+                format: 'DD.MM.YYYY',
+                cancelLabel: 'Очистить',
+                applyLabel: 'Применить',
+                daysOfWeek: ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
+                monthNames: ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
+            }
+        });
+
+        // Обработчик события "apply": записываем выбранный диапазон в поле и скрытые поля
+        $('#id_edit_date_range').on('apply.daterangepicker', function(ev, picker) {
+            const rangeText = picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY');
+            $(this).val(rangeText);
+            $('#id_edit_shoot_date_from').val(picker.startDate.format('YYYY-MM-DD'));
+            $('#id_edit_shoot_date_to').val(picker.endDate.format('YYYY-MM-DD'));
+            $(this).removeClass('is-invalid');
+            $(this).closest('.form-group').find('.invalid-feedback').remove();
+        });
+
+        // Обработчик события "cancel": очищаем поле и скрытые поля
+        $('#id_edit_date_range').on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+            $('#id_edit_shoot_date_from').val('');
+            $('#id_edit_shoot_date_to').val('');
+            $(this).removeClass('is-invalid');
+            $(this).closest('.form-group').find('.invalid-feedback').remove();
+        });
+    }
+    function attachFieldErrorClearing(form) {
+        // Находим все инпуты, селекты и текстовые поля
+        const formElements = form.querySelectorAll('input, select, textarea');
+        
+        formElements.forEach(element => {
+            // Для текстовых полей и textarea достаточно события input
+            element.addEventListener('input', function() {
+                clearFieldError(element);
+            });
+            
+            // Для select (выпадающих списков) часто удобнее событие change
+            // (хотя во многих браузерах input на select тоже срабатывает)
+            element.addEventListener('change', function() {
+                clearFieldError(element);
+            });
+        });
+    }
+    
+    function clearFieldError(field) {
+        // Удаляем класс is-invalid
+        field.classList.remove('is-invalid');
+        // Удаляем блок с сообщением об ошибке, если он есть
+        const errorDiv = field.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+
     
     // Обработчик для всех кнопок редактирования заявки
     const editButtons = document.querySelectorAll('.editRequestBtn');
@@ -280,11 +368,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     formContainer.innerHTML = html;
                     attachDynamicListeners();
                     attachEditFormSubmitHandler();
-                    // Привязываем обработчик удаления после вставки HTML
                     attachDeleteRequestHandler();
+                    attachEditDateRangePicker(); // Инициализация датапикера
             
                     const editForm = document.getElementById('editRequestForm');
                     if (editForm) {
+                        // Добавляем обработчики, чтобы ошибки исчезали сразу при вводе/выборе
+                        attachFieldErrorClearing(editForm);
+            
                         const isEditable = editForm.dataset.editable;
                         console.log("Редактируемость формы:", isEditable);
                         if (isEditable && isEditable.toLowerCase() === "false") {
@@ -304,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (objectTypeSelect) {
                                 const initialType = objectTypeSelect.dataset.initialType;
                                 console.log("Initial type from dataset:", initialType);
-                                if (initialType === "2" || initialType === "4") {
+                                if (initialType === "2") {
                                     objectTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
                                 }
                             }
@@ -318,6 +409,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     editModal.style.display = 'block';
                 }
             })
+            
+            
             
             
             

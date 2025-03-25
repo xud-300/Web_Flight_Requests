@@ -215,7 +215,7 @@ class FlightRequestEditForm(forms.ModelForm):
         # Если тип объекта не выбран – ошибка для него будет показана, поэтому для object_name не добавляем дополнительную ошибку.
         if object_type:
             if str(object_type.id) != "2":
-                if not object_name:
+                if not object_name and 'object_name' not in self._errors:
                     self.add_error('object_name', 'Пожалуйста, выберите название объекта.')
         else:
             # Если объект не выбран, то ошибка для object_type уже должна появиться.
@@ -225,13 +225,20 @@ class FlightRequestEditForm(forms.ModelForm):
         missing_from = not shoot_date_from
         missing_to = not shoot_date_to
 
-        if missing_from and missing_to:
+        # Проверка наличия дат съемки
+        if not shoot_date_from and not shoot_date_to:
             self.add_error('shoot_date_from', 'Пожалуйста, выберите диапазон дат съёмки.')
-        else:
-            if missing_from:
-                self.add_error('shoot_date_from', 'Дата съемки от обязательна для заполнения.')
-            if missing_to:
-                self.add_error('shoot_date_to', 'Дата съемки до обязательна для заполнения.')
+        elif not shoot_date_from:
+            self.add_error('shoot_date_from', 'Дата съемки от обязательна для заполнения.')
+        elif not shoot_date_to:
+            self.add_error('shoot_date_to', 'Дата съемки до обязательна для заполнения.')
+
+        # Если обе даты указаны, проверяем корректность диапазона
+        if shoot_date_from and shoot_date_to:
+            if shoot_date_from > shoot_date_to:
+                self.add_error('shoot_date_from', '"Дата съемки от" не может быть позже "Даты съемки до".')
+                self.add_error('shoot_date_to', '"Дата съемки до" не может быть раньше "Даты съемки от".')
+
 
         piket_errors = []
 
@@ -262,20 +269,6 @@ class FlightRequestEditForm(forms.ModelForm):
         if piket_errors:
             self.add_error(None, '<br>'.join(piket_errors))
 
-
-
-        # Проверка дат съемки (без проверки, что даты не в прошлом)
-        if not shoot_date_from:
-            self.add_error('shoot_date_from', 'Дата съемки от обязательна для заполнения.')
-        if not shoot_date_to:
-            self.add_error('shoot_date_to', 'Дата съемки до обязательна для заполнения.')
-        if shoot_date_from and shoot_date_to:
-            if shoot_date_from > shoot_date_to:
-                self.add_error('shoot_date_from', '"Дата съемки от" не может быть позже "Даты съемки до".')
-                self.add_error('shoot_date_to', '"Дата съемки до" не может быть раньше "Даты съемки от".')
-
-        if not (orthophoto or laser or panorama or overview):
-            self.add_error('overview', 'Пожалуйста, выберите хотя бы один тип съемки.')
 
         return cleaned_data
 
