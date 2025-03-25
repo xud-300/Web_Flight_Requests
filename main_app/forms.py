@@ -263,11 +263,22 @@ class FlightRequestEditForm(forms.ModelForm):
                     piket_errors.append('"Пикет до" должен быть целым числом.')
 
             # 3) Проверка, что "Пикет от" не больше "Пикета до"
-            if (piket_from is not None) and (piket_to is not None) and (piket_from > piket_to):
-                piket_errors.append('"Пикет от" не может быть больше "Пикета до".')
+            if (piket_from is not None) and (piket_to is not None):
+                if piket_from > piket_to:
+                    piket_errors.append('"Пикет от" не может быть больше "Пикета до".')
+                # 4) Проверка, что оба поля не равны нулю одновременно
+                if piket_from == 0 and piket_to == 0:
+                    piket_errors.append('Оба поля "Пикет от" и "Пикет до" не могут одновременно равняться нулю.')
 
         if piket_errors:
             self.add_error(None, '<br>'.join(piket_errors))
+
+        
+        # 7. Должен быть выбран хотя бы один тип съемки.
+        if not (orthophoto or laser or panorama or overview):
+            error_msg = 'Пожалуйста, выберите хотя бы один тип съемки.'
+            self.add_error('overview', error_msg)
+
 
 
         return cleaned_data

@@ -54,11 +54,23 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedValue === "4") {
                 if (piketFrom) {
                     piketFrom.value = "";
+                    piketFrom.placeholder = "";  // Очищаем подсказку
                     piketFrom.disabled = true;
                 }
                 if (piketTo) {
                     piketTo.value = "";
+                    piketTo.placeholder = "";    // Очищаем подсказку
                     piketTo.disabled = true;
+                }
+            } else {
+                // Для всех остальных типов (кроме "ЖД", обработанной выше) включаем поля и восстанавливаем placeholder
+                if (piketFrom) {
+                    piketFrom.disabled = false;
+                    piketFrom.placeholder = "0"; // Возвращаем подсказку
+                }
+                if (piketTo) {
+                    piketTo.disabled = false;
+                    piketTo.placeholder = "100"; // Возвращаем подсказку
                 }
             }
     
@@ -112,30 +124,57 @@ document.addEventListener('DOMContentLoaded', function() {
     
 
     function updateFormErrors(form, errors) {
-        // Убираем предыдущие ошибки
+        // Удаляем все элементы ошибок, кроме контейнера для пикетов
         const errorElements = form.querySelectorAll('.invalid-feedback');
-        errorElements.forEach(el => el.remove());
+        errorElements.forEach(el => {
+            if (el.id !== 'piketErrorSpace') {
+                el.remove();
+            } else {
+                // Если это контейнер для пикетов – просто очищаем его содержимое
+                el.innerHTML = '';
+            }
+        });
         const invalidFields = form.querySelectorAll('.is-invalid');
         invalidFields.forEach(el => el.classList.remove('is-invalid'));
     
-        // Для каждого поля с ошибками
         for (let fieldName in errors) {
-            // Находим поле по имени
+            // Если ошибка не привязана к конкретному полю
+            if (fieldName === '__all__') {
+                // Используем контейнер с id="piketErrorSpace"
+                let errorContainer = form.querySelector('#piketErrorSpace');
+                if (!errorContainer) {
+                    // Если его нет, создаём и добавляем его в подходящее место (например, в piketContainer)
+                    errorContainer = document.createElement('div');
+                    errorContainer.id = 'piketErrorSpace';
+                    errorContainer.style.marginLeft = '10px';
+                    errorContainer.className = 'invalid-feedback d-block';
+                    const piketContainer = form.querySelector('#piketContainer');
+                    if (piketContainer) {
+                        piketContainer.appendChild(errorContainer);
+                    } else {
+                        form.insertBefore(errorContainer, form.firstChild);
+                    }
+                }
+                errorContainer.classList.add('invalid-feedback', 'd-block');
+                errorContainer.innerHTML = errors[fieldName].join('<br>');
+                continue; // Переходим к следующей ошибке
+            }
+    
+            // Стандартная обработка для полей
             const field = form.querySelector('[name="' + fieldName + '"]');
             if (field) {
                 field.classList.add('is-invalid');
-                // Создаем контейнер для ошибки
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'invalid-feedback';
                 errorDiv.innerHTML = errors[fieldName].join('<br>');
-                // Вставляем контейнер сразу после поля
                 if (field.parentNode) {
-                    // Если родитель - элемент формы, добавляем после самого поля
                     field.parentNode.appendChild(errorDiv);
                 }
             }
         }
     }
+    
+    
     
 
 
@@ -337,6 +376,29 @@ document.addEventListener('DOMContentLoaded', function() {
             errorDiv.remove();
         }
     }
+        // Функция переключения истории
+        function attachHistoryToggle() {
+            const toggleBtn = document.getElementById('toggleHistoryBtn');
+            const historyBlock = document.getElementById('requestHistory');
+            const historyTitle = document.getElementById('historyTitle');
+            if (!toggleBtn || !historyBlock) return;
+    
+            // Изначально скрыто (если хотите по умолчанию открытым — уберите style="display: none;" в HTML)
+            // При клике показываем/скрываем
+            toggleBtn.addEventListener('click', function() {
+                if (historyBlock.style.display === 'none') {
+                    // Показываем
+                    historyBlock.style.display = 'block';
+                    historyTitle.style.display = 'block';
+                    toggleBtn.textContent = 'Скрыть историю изменений ▲';
+                } else {
+                    // Скрываем
+                    historyBlock.style.display = 'none';
+                    historyTitle.style.display = 'none';
+                    toggleBtn.textContent = 'Показать историю изменений ▼';
+                }
+            });
+        }
 
     
     // Обработчик для всех кнопок редактирования заявки
@@ -367,7 +429,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     attachDynamicListeners();
                     attachEditFormSubmitHandler();
                     attachDeleteRequestHandler();
-                    attachEditDateRangePicker(); // Инициализация датапикера
+                    attachEditDateRangePicker();
+                    attachHistoryToggle();
             
                     const editForm = document.getElementById('editRequestForm');
                     if (editForm) {
@@ -393,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (objectTypeSelect) {
                                 const initialType = objectTypeSelect.dataset.initialType;
                                 console.log("Initial type from dataset:", initialType);
-                                if (initialType === "2") {
+                                if (initialType === "2" || initialType === "4") {
                                     objectTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
                                 }
                             }

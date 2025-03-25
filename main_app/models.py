@@ -95,8 +95,11 @@ class FlightRequest(models.Model):
     def __str__(self):
         return f"Request {self.id}"
 
-from django.contrib.auth.models import User as AuthUser  # импортируем встроенную модель
 
+from django.db import models
+from django.contrib.auth.models import User as AuthUser
+from main_app.models import FlightRequest, ObjectType, Object  # <-- Импорт моделей, где лежат object_type, object_name
+import json
 # Новая модель для истории изменений
 class RequestHistory(models.Model):
     id = models.AutoField(primary_key=True)
@@ -106,12 +109,12 @@ class RequestHistory(models.Model):
         related_name='history'
     )
     changed_by = models.ForeignKey(
-        AuthUser,  # теперь используем встроенную модель пользователя
+        AuthUser,  # встроенная модель пользователя
         on_delete=models.SET_NULL,
         null=True
     )
     timestamp = models.DateTimeField(auto_now_add=True)
-    changes = models.TextField()  # можно использовать JSONField для структурированного хранения
+    changes = models.TextField()  # JSON-строка со старыми и новыми значениями
 
     class Meta:
         db_table = 'request_history'
@@ -120,3 +123,82 @@ class RequestHistory(models.Model):
     def __str__(self):
         return f"History for Request {self.flight_request.id} at {self.timestamp}"
 
+    # Словарь для отображения названий полей по-русски
+    FIELD_LABELS = {
+        "object_type": "Тип объекта",
+        "object_name": "Название объекта",
+        "shoot_date_from": "Дата съёмки (от)",
+        "shoot_date_to": "Дата съёмки (до)",
+        "piket_from": "Пикет от",
+        "piket_to": "Пикет до",
+        "orthophoto": "Ортофотоплан",
+        "laser": "Лазерное сканирование",
+        "panorama": "Панорама",
+        "overview": "Обзорные фото",
+        "note": "Примечание",
+        "status": "Статус заявки",
+        # Если есть ещё поля — добавьте сюда
+    }
+
+    def get_parsed_changes(self):
+        """
+        Возвращает список кортежей вида:
+        [(label, old_value, new_value), ...]
+        где label - человеко-читаемое название поля,
+            old_value/new_value - преобразованные значения.
+        """
+        try:
+            changes_dict = json.loads(self.changes)
+        except json.JSONDecodeError:
+            return []
+
+        result = []
+        for field, values in changes_dict.items():
+            # values обычно выглядит как [старое, новое]
+            old_val, new_val = values[0], values[1] if len(values) > 1 else ("", "")
+
+            # 1) Подмена названия поля
+            label = self.FIELD_LABELS.get(field, field)
+
+            # 2) Преобразование булевых значений "True"/"False"
+            if old_val == "True":
+                old_val = "Да"
+            elif old_val == "False":
+                old_val = "Нет"
+            if new_val == "True":
+                new_val = "Да"
+            elif new_val == "False":
+                new_val = "Нет"
+
+            # 3) Преобразование ID -> Название (для object_type, object_name)
+            if field == "object_type":
+                old_val = self._lookup_object_type(old_val)
+                new_val = self._lookup_object_type(new_val)
+            elif field == "object_name":
+                old_val = self._lookup_object_name(old_val)
+                new_val = self._lookup_object_name(new_val)
+
+            # Можно добавить логику для других полей (например, status: "В работе" -> "В процессе" и т.д.)
+
+            result.append((label, old_val, new_val))
+
+        return result
+
+    def _lookup_object_type(self, val):
+        """Пытается найти ObjectType по ID, вернуть type_name. Если не находит, вернуть исходное."""
+        try:
+            # Если val — строка, пробуем привести к int
+            obj_type_id = int(val)
+            obj_type = ObjectType.objects.get(pk=obj_type_id)
+            return obj_type.type_name
+        except (ValueError, ObjectType.DoesNotExist):
+            return val
+
+    def _lookup_object_name(self, val):
+        """Пытается найти Object по ID, вернуть object_name. Если не находит, вернуть исходное."""
+        try:
+            obj_id = int(val)
+            obj = Object.objects.get(pk=obj_id)
+            return obj.object_name
+        except (ValueError, Object.DoesNotExist):
+            return val

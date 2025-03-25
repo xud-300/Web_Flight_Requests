@@ -119,24 +119,36 @@
   <hr>
   {% load json_extras %}
 
-  <h6>История изменений</h6>
-  <div id="requestHistory">
+  <!-- Кнопка переключения истории -->
+  <div class="text-center my-2">
+    <button type="button" class="btn btn-warning" id="toggleHistoryBtn" style="width: 100%;">
+      Показать историю изменений ▼
+    </button>
+  </div>
+
+  <!-- Заголовок и блок истории (из предыдущего шага) -->
+  <h6 id="historyTitle" style="display: none;">История изменений</h6>
+  <div id="requestHistory" style="display: none;">
     {% for record in object.history.all %}
-      <div class="history-record">
-        <strong>{{ record.changed_by.profile.full_name }}</strong> – {{ record.timestamp|date:"d.m.Y H:i" }}<br>
-        <em>Изменения:</em>
-        <ul>
-          {% with record.changes|json_loads as changes_dict %}
-            {% for field, change in changes_dict.items %}
-              <li>{{ field }}: "{{ change.0 }}" → "{{ change.1 }}"</li>
+      <div class="card mb-2">
+        <div class="card-header">
+          <strong>{{ record.changed_by.profile.full_name }}</strong>
+          <span class="text-muted">– {{ record.timestamp|date:"d.m.Y H:i" }}</span>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0">
+            {% for label, old_val, new_val in record.get_parsed_changes %}
+              <li>{{ label }}: "{{ old_val }}" → "{{ new_val }}"</li>
             {% endfor %}
-          {% endwith %}
-        </ul>
+          </ul>
+        </div>
       </div>
     {% empty %}
       <p>Нет истории изменений.</p>
     {% endfor %}
   </div>
+
+  
 {% else %}
   <div id="editRequestModal" class="modal" style="display: none;">
     <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
