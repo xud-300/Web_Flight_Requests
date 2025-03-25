@@ -28,37 +28,29 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedValue = this.value;
             console.log("Изменение типа объекта в edit modal:", selectedValue);
     
-            // Сбрасываем поля по умолчанию
-            objectNameSelect.disabled = false;
-            objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-            if (piketFrom) {
-                piketFrom.disabled = false;
-            }
-            if (piketTo) {
-                piketTo.disabled = false;
-            }
+            // Сбрасываем 'data-initial-value', чтобы не устанавливать старое значение
+            objectNameSelect.removeAttribute('data-initial-value');
     
-            // Если тип не выбран – просто очищаем поля и выходим
+            // Ставим "Выберите название" по умолчанию
+            objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+            objectNameSelect.disabled = false;
+    
+            if (piketFrom) piketFrom.disabled = false;
+            if (piketTo)   piketTo.disabled = false;
+    
+            // Если тип не выбран – выходим
             if (!selectedValue) {
                 return;
             }
     
-            // --- 1. Логика для "ЖД" (id = "2") ---
+            // Логика для "ЖД" (id = "2")
             if (selectedValue === "2") {
-                // Отключаем и очищаем "Название объекта"
                 objectNameSelect.disabled = true;
                 objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
-                // Пикеты при "ЖД" остаются включёнными
-            
-                // <--- ДОБАВЛЯЕМ ОЧИСТКУ ОШИБОК --->
-                clearFieldError(objectTypeSelect);
-                clearFieldError(objectNameSelect);
-            
                 return;
             }
     
-            // --- 2. Логика для "Городок" (id = "4") ---
-            // Отличается только тем, что отключаем пикеты
+            // Логика для "Городок" (id = "4") — отключаем пикеты
             if (selectedValue === "4") {
                 if (piketFrom) {
                     piketFrom.value = "";
@@ -70,11 +62,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
     
-            // --- 3. Общая логика для "Городок" ИЛИ "прочие" ---
-            // Вызываем AJAX, чтобы подгрузить/обновить список названий
+            // Вызываем AJAX для обновления списка названий
             loadObjectNames(selectedValue, objectNameSelect);
         });
     }
+    
     
     
     // Вспомогательная функция для AJAX-загрузки названий
@@ -85,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const url = window.getObjectNamesUrl + '?object_type=' + selectedValue;
         console.log("Отправка запроса по URL:", url);
+    
         fetch(url)
             .then(response => {
                 if (!response.ok) {
@@ -94,14 +87,18 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 console.log("Получены данные:", data);
-                objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+                // Мы уже до fetch() ставили "Выберите название",
+                // так что здесь можно оставить, либо ещё раз продублировать:
+                // objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
+    
                 data.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item.id;
                     option.textContent = item.object_name;
                     objectNameSelect.appendChild(option);
                 });
-                // Если задан data-initial-value, устанавливаем выбранное значение
+    
+                // Если атрибут всё ещё есть — значит, это не пользовательское изменение, а первая загрузка формы
                 const initialValue = objectNameSelect.getAttribute('data-initial-value');
                 if (initialValue) {
                     objectNameSelect.value = initialValue;
@@ -109,6 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
     }
+    
     
     
     
