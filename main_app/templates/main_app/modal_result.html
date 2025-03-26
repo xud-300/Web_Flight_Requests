@@ -1,0 +1,164 @@
+<div id="resultModal" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Результаты съёмки</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Контейнер для динамического наполнения разделов -->
+          <div id="resultContent">
+            <!-- Индикатор загрузки (по умолчанию скрыт) -->
+            <div id="loadingIndicator" style="display: none; text-align: center; margin: 20px;">
+                <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Загрузка...</span>
+                </div>
+                <p>Загрузка данных...</p>
+            </div>
+            <!-- Раздел для Ортофотоплана -->
+            <div id="orthoSection" class="card mb-2 result-section" style="display: none;">
+              <div class="card-header">
+                Ортофотоплан
+              </div>
+              <div class="card-body">
+                <p>
+                  <a href="#" id="orthoDownloadLink">
+                    Архив: <span id="orthoArchiveName">название_архива.zip</span>
+                  </a>
+                </p>
+                {% if user.is_staff %}
+                <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="ortho">
+                  Загрузить
+                </button>
+                <div id="orthoUpload" class="upload-section" style="display: none; margin-top: 10px; border: 1px dashed #ccc; padding: 10px; background-color: #f9f9f9;">
+                  <h6>Загрузить результаты для Ортофотоплана</h6>
+                  <form id="orthoUploadForm" data-request-id="">
+                    <div class="form-group">
+                      <label for="orthoFile">Выберите архив:</label>
+                      <input type="file" id="orthoFile" name="orthoFile" class="form-control-file">
+                    </div>
+                    <div class="form-group">
+                      <label for="orthoLink">Или введите ссылку на архив:</label>
+                      <input type="url" id="orthoLink" name="orthoLink" class="form-control" placeholder="http://">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Загрузить</button>
+                    <button type="button" class="btn btn-secondary btn-sm cancelUploadBtn" data-type="ortho">Отмена</button>
+                  </form>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+  
+            <!-- Раздел для Лазерного сканирования -->
+            <div id="laserSection" class="card mb-2 result-section" style="display: none;">
+              <div class="card-header">
+                Лазерное сканирование
+              </div>
+              <div class="card-body">
+                <p>
+                  <a href="#" id="laserDownloadLink">Архив: название_архива.zip</a>
+                </p>
+                <p>
+                  <a href="#" id="laserViewLink">Просмотр результата</a>
+                </p>
+                {% if user.is_staff %}
+                <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="laser">
+                  Загрузить
+                </button>
+                <div id="laserUpload" class="upload-section" style="display: none; margin-top: 10px; border: 1px dashed #ccc; padding: 10px; background-color: #f9f9f9;">
+                  <h6>Загрузить результаты для Лазерного сканирования</h6>
+                  <form id="laserUploadForm" data-request-id="">
+                    <div class="form-group">
+                      <label for="laserFile">Выберите архив:</label>
+                      <input type="file" id="laserFile" name="laserFile" class="form-control-file">
+                    </div>
+                    <div class="form-group">
+                      <label for="laserLink">Или введите ссылку на архив:</label>
+                      <input type="url" id="laserLink" name="laserLink" class="form-control" placeholder="http://">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Загрузить</button>
+                    <button type="button" class="btn btn-secondary btn-sm cancelUploadBtn" data-type="laser">Отмена</button>
+                  </form>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+  
+            <!-- Раздел для Панорамы -->
+            <div id="panoramaSection" class="card mb-2 result-section" style="display: none;">
+              <div class="card-header">
+                Панорама
+              </div>
+              <div class="card-body">
+                <p>
+                  <a href="#" id="panoramaViewLink">Перейти к просмотру панорамы</a>
+                </p>
+                {% if user.is_staff %}
+                <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="panorama">
+                  Загрузить
+                </button>
+                <div id="panoramaUpload" class="upload-section" style="display: none; margin-top: 10px; border: 1px dashed #ccc; padding: 10px; background-color: #f9f9f9;">
+                  <h6>Загрузить результаты для Панорамы</h6>
+                  <form id="panoramaUploadForm" data-request-id="">
+                    <div class="form-group">
+                      <label for="panoramaFile">Выберите архив:</label>
+                      <input type="file" id="panoramaFile" name="panoramaFile" class="form-control-file">
+                    </div>
+                    <div class="form-group">
+                      <label for="panoramaLink">Или введите ссылку на архив:</label>
+                      <input type="url" id="panoramaLink" name="panoramaLink" class="form-control" placeholder="http://">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Загрузить</button>
+                    <button type="button" class="btn btn-secondary btn-sm cancelUploadBtn" data-type="panorama">Отмена</button>
+                  </form>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+  
+            <!-- Раздел для Обзорных фото -->
+            <div id="overviewSection" class="card mb-2 result-section" style="display: none;">
+              <div class="card-header">
+                Обзорные фото
+              </div>
+              <div class="card-body">
+                <p>
+                  <a href="#" id="overviewDownloadLink">Архив: название_архива.zip</a>
+                </p>
+                <p>
+                  <a href="#" id="overviewViewLink">Просмотр фото</a>
+                </p>
+                {% if user.is_staff %}
+                <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="overview">
+                  Загрузить
+                </button>
+                <div id="overviewUpload" class="upload-section" style="display: none; margin-top: 10px; border: 1px dashed #ccc; padding: 10px; background-color: #f9f9f9;">
+                  <h6>Загрузить результаты для Обзорных фото</h6>
+                  <form id="overviewUploadForm" data-request-id="">
+                    <div class="form-group">
+                      <label for="overviewFile">Выберите архив:</label>
+                      <input type="file" id="overviewFile" name="overviewFile" class="form-control-file">
+                    </div>
+                    <div class="form-group">
+                      <label for="overviewLink">Или введите ссылку на архив:</label>
+                      <input type="url" id="overviewLink" name="overviewLink" class="form-control" placeholder="http://">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Загрузить</button>
+                    <button type="button" class="btn btn-secondary btn-sm cancelUploadBtn" data-type="overview">Отмена</button>
+                  </form>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+  
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  

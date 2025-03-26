@@ -27,6 +27,49 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+       
+  // Обработчик для кнопок "Результат"
+  document.querySelectorAll('.resultBtn').forEach(function(button) {
+    button.addEventListener('click', function() {
+      const requestId = button.getAttribute('data-request-id');
+      console.log("Открываем модальное окно для заявки с ID:", requestId);
+      
+      // Открываем модальное окно (если используется Bootstrap, например, через jQuery)
+      $('#resultModal').modal('show');
+      
+      // Если нужно динамически подгружать данные, можно вызвать функцию:
+      loadResultData(requestId);
+    });
+  });
+
+  // Пример функции загрузки данных для модального окна (заглушка)
+  function loadResultData(requestId) {
+    // Формируем URL, используя имя маршрута (если используется reverse через шаблон, можно также прописать напрямую)
+    const url = `/main_app/requests/get_results/?request_id=${requestId}`;
+    console.log("Запрос результатов по URL:", url);
+    
+    fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Ошибка при загрузке данных результатов");
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Получены данные результатов:", data);
+        // Вызываем функцию заполнения модального окна
+        populateResultModal(data);
+    })
+    .catch(error => {
+        console.error("Ошибка при загрузке результатов:", error);
+        // Можно показать сообщение об ошибке в модальном окне
+        document.getElementById('resultContent').innerHTML = `<p style="color: red;">Ошибка загрузки результатов: ${error.message}</p>`;
+    });
+}
+
+
     window.addEventListener('click', function(event) {
         const modals = document.querySelectorAll('.modal');
         modals.forEach(function(modal) {

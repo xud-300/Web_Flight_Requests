@@ -2,7 +2,7 @@
 import json
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View
-from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseBadRequest
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -11,7 +11,7 @@ from django.template.loader import render_to_string
 from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser
 from main_app.models import User
 from .forms import FlightRequestCreateForm, FlightRequestEditForm
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 
 
 # Список заявок
@@ -315,3 +315,109 @@ def delete_flight_request(request, pk):
     
     flight_request.delete()
     return JsonResponse({'success': True})
+
+
+
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_GET
+from django.views import View
+from django.utils.decorators import method_decorator
+from .models import FlightRequest
+
+@require_GET
+@login_required
+def get_request_results(request):
+    """
+    Возвращает данные результатов съёмки для заявки.
+    Ожидается GET параметр request_id.
+    Если заявка не найдена или request_id не передан, возвращает ошибку.
+    """
+    request_id = request.GET.get('request_id')
+    if not request_id:
+        return HttpResponseBadRequest("request_id не указан")
+    
+    try:
+        flight = FlightRequest.objects.get(id=request_id)
+    except FlightRequest.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
+    
+    # Формируем объект данных для каждого типа съемки,
+    # если соответствующий флаг (orthophoto, laser, panorama, overview) установлен в заявке.
+    data = {}
+    
+    # Безопасная функция для получения атрибутов (чтобы не вызывать ошибку, если поля нет)
+    def safe_getattr(obj, attr_name, default=None):
+        return getattr(obj, attr_name, default)
+
+    # Ортофотоплан
+    if getattr(flight, 'orthophoto', False):
+        data['orthophoto'] = {
+            'download_link': safe_getattr(flight, 'ortho_archive_url', '#'),
+            'archive_name': safe_getattr(flight, 'ortho_archive_name', 'ortho_archive.zip')
+        }
+    
+    # Лазерное сканирование
+    if getattr(flight, 'laser', False):
+        data['laser'] = {
+            'download_link': safe_getattr(flight, 'laser_archive_url', '#'),
+            'view_link': safe_getattr(flight, 'laser_view_url', '#')
+        }
+    
+    # Панорама
+    if getattr(flight, 'panorama', False):
+        data['panorama'] = {
+            'view_link': safe_getattr(flight, 'panorama_view_url', '#')
+        }
+    
+    # Обзорные фото
+    if getattr(flight, 'overview', False):
+        data['overview'] = {
+            'download_link': safe_getattr(flight, 'overview_archive_url', '#'),
+            'view_link': safe_getattr(flight, 'overview_view_url', '#')
+        }
+    
+    return JsonResponse(data)
+
+
+@method_decorator(login_required, name='dispatch')
+class UploadResultView(View):
+    """
+    Обрабатывает загрузку результатов съемки.
+    Ожидает POST-параметры:
+      - upload_type: тип загрузки ("ortho", "laser", "panorama", "overview")
+      - request_id: идентификатор заявки
+    Если пользователь не является администратором, доступ запрещен.
+    На данном этапе возвращается dummy-ответ.
+    """
+    def post(self, request, *args, **kwargs):
+        # Проверка прав администратора
+        if not request.user.is_staff:
+            return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
+        
+        upload_type = request.POST.get('upload_type')
+        request_id = request.POST.get('request_id')
+        if not upload_type or not request_id:
+            return HttpResponseBadRequest("upload_type и request_id обязательны")
+        
+        # Пример обработки загруженного файла:
+        # file_obj = request.FILES.get('orthoFile')  # Если name="orthoFile" в форме
+        # link = request.POST.get('orthoLink')
+        
+        # Для демонстрации возвращаем dummy-данные
+        dummy_result = {
+            upload_type: {
+                "download_link": f"/media/{upload_type}_archive_updated.zip",
+                "view_link": f"/results/{upload_type}_view/?id={request_id}",
+                "archive_name": f"{upload_type}_archive_updated.zip"
+            }
+        }
+        
+        # Здесь можно добавить логику сохранения данных в FlightRequest
+        # Например:
+        # flight = FlightRequest.objects.get(id=request_id)
+        # if upload_type == "laser":
+        #     flight.laser_archive_url = ...
+        #     flight.save(update_fields=['laser_archive_url'])
+
+        return JsonResponse({'success': True, 'data': dummy_result})

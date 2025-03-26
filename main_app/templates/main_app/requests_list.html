@@ -5,6 +5,7 @@
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'css/requests_list.css' %}">
   <link rel="stylesheet" href="{% static 'css/modal_create.css' %}">
+  <link rel="stylesheet" href="{% static 'css/modal_result.css' %}">
   <script>
       window.getObjectNamesUrl = "{% url 'get_object_names' %}";
   </script>
@@ -287,6 +288,7 @@
                     <th class="note-column">Примечание</th>
                     <th>Создатель</th>
                     <th>Изменить</th>
+                    <th>Результат</th>
                 </tr>
             </thead>            
             <tbody>
@@ -368,6 +370,14 @@
                             </button>
                         {% endif %}
                     </td>
+                    <td>
+                      {% if request.status|lower == "выполнена" %}
+                        <button class="btn btn-sm btn-outline-info resultBtn" data-request-id="{{ request.id }}">
+                          Результат
+                        </button>
+                    </td>
+
+                  {% endif %}
                 </tr>
                 {% empty %}
                 <tr>
@@ -382,10 +392,13 @@
 <!-- Включаем модальные окна для создания и редактирования заявок -->
 {% include "main_app/modal_create.html" %}
 {% include "main_app/modal_edit.html" %}
+{% include "main_app/modal_result.html" %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/requests_list.js' %}"></script>
 <script src="{% static 'js/modal_create.js' %}"></script>
 <script src="{% static 'js/modal_edit.js' %}"></script>
+<script src="{% static 'js/modal_result.js' %}"></script>
 {% endblock %}

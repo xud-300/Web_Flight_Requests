@@ -1,0 +1,37 @@
+/* Дополнительные стили для модального окна результатов */
+.result-section.card {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.result-section.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.upload-section {
+    background-color: #f9f9f9;
+    border: 1px dashed #ccc;
+    padding: 10px;
+    margin-top: 10px;
+}
+.result-section {
+    overflow: hidden;
+    transition: opacity 0.3s ease, max-height 0.3s ease;
+    opacity: 1;
+    max-height: 1000px; /* достаточно большое значение */
+}
+
+.result-section.hidden {
+    opacity: 0;
+    max-height: 0;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .result-section.card {
+        margin-bottom: 15px;
+    }
+}
+
+  

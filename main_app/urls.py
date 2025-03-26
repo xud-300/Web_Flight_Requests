@@ -11,6 +11,8 @@ from .views import (
     delete_flight_request,
     mass_update_status,
     mass_delete_requests,
+    get_request_results,
+    UploadResultView,
 )
 
 urlpatterns = [
@@ -23,4 +25,6 @@ urlpatterns = [
     path('requests/delete/<int:pk>/', delete_flight_request, name='request_delete'),
     path('requests/mass_update_status/', mass_update_status, name='mass_update_status'),
     path('requests/mass_delete/', mass_delete_requests, name='mass_delete_requests'),
+    path('requests/get_results/', get_request_results, name='get_request_results'),
+    path('requests/upload_result/', UploadResultView.as_view(), name='upload_result'),
 ]
