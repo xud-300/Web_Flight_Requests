@@ -12,6 +12,9 @@ from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramU
 from main_app.models import User
 from .forms import FlightRequestCreateForm, FlightRequestEditForm
 from django.views.decorators.http import require_POST, require_GET
+from django.utils.decorators import method_decorator
+from .models import FlightRequest, FlightResultFile
+from .upload_forms import OrthoUploadForm, LaserUploadForm, PanoramaUploadForm, OverviewUploadForm
 
 
 # Список заявок
@@ -317,14 +320,6 @@ def delete_flight_request(request, pk):
     return JsonResponse({'success': True})
 
 
-
-from django.http import JsonResponse, HttpResponseBadRequest
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_GET
-from django.views import View
-from django.utils.decorators import method_decorator
-from .models import FlightRequest
-
 @require_GET
 @login_required
 def get_request_results(request):
@@ -380,18 +375,13 @@ def get_request_results(request):
     return JsonResponse(data)
 
 
+
 @method_decorator(login_required, name='dispatch')
 class UploadResultView(View):
     """
     Обрабатывает загрузку результатов съемки.
-    Ожидает POST-параметры:
-      - upload_type: тип загрузки ("ortho", "laser", "panorama", "overview")
-      - request_id: идентификатор заявки
-    Если пользователь не является администратором, доступ запрещен.
-    На данном этапе возвращается dummy-ответ.
     """
     def post(self, request, *args, **kwargs):
-        # Проверка прав администратора
         if not request.user.is_staff:
             return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
         
@@ -400,24 +390,221 @@ class UploadResultView(View):
         if not upload_type or not request_id:
             return HttpResponseBadRequest("upload_type и request_id обязательны")
         
-        # Пример обработки загруженного файла:
-        # file_obj = request.FILES.get('orthoFile')  # Если name="orthoFile" в форме
-        # link = request.POST.get('orthoLink')
+        try:
+            flight = FlightRequest.objects.get(id=request_id)
+        except FlightRequest.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
         
-        # Для демонстрации возвращаем dummy-данные
-        dummy_result = {
-            upload_type: {
-                "download_link": f"/media/{upload_type}_archive_updated.zip",
-                "view_link": f"/results/{upload_type}_view/?id={request_id}",
-                "archive_name": f"{upload_type}_archive_updated.zip"
+        # Выбираем форму в зависимости от upload_type
+        if upload_type == 'ortho':
+            form = OrthoUploadForm(request.POST, request.FILES)
+        elif upload_type == 'laser':
+            form = LaserUploadForm(request.POST, request.FILES)
+        elif upload_type == 'panorama':
+            form = PanoramaUploadForm(request.POST)
+        elif upload_type == 'overview':
+            form = OverviewUploadForm(request.POST, request.FILES)
+        else:
+            return JsonResponse({'success': False, 'error': 'Неверный тип загрузки'}, status=400)
+        
+        if form.is_valid():
+            if upload_type in ['ortho', 'laser']:
+                # Сохраняем один файл
+                file = form.cleaned_data.get('file')
+                view_link = form.cleaned_data.get('view_link') if upload_type == 'laser' else None
+                result_file = FlightResultFile.objects.create(
+                    flight_request=flight,
+                    result_type=upload_type,
+                    file=file,
+                    view_link=view_link,
+                    file_size=file.size
+                )
+            elif upload_type == 'panorama':
+                # Только ссылка
+                view_link = form.cleaned_data.get('view_link')
+                result_file = FlightResultFile.objects.create(
+                    flight_request=flight,
+                    result_type=upload_type,
+                    view_link=view_link
+                )
+            elif upload_type == 'overview':
+                files = request.FILES.getlist('files')
+                created_files = []
+                for f in files:
+                    rf = FlightResultFile.objects.create(
+                        flight_request=flight,
+                        result_type=upload_type,
+                        file=f,
+                        file_size=f.size
+                    )
+                    created_files.append(rf)
+            # Формируем dummy-ответ, можно вернуть актуальные ссылки, если они вычисляются
+            dummy_result = {
+                upload_type: {
+                    "download_link": f"/media/flight_results/{upload_type}_archive_updated.zip",  # или вычислить по-новому
+                    "view_link": f"/results/{upload_type}_view/?id={request_id}",
+                    "archive_name": f"{upload_type}_archive_updated.zip"
+                }
             }
-        }
-        
-        # Здесь можно добавить логику сохранения данных в FlightRequest
-        # Например:
-        # flight = FlightRequest.objects.get(id=request_id)
-        # if upload_type == "laser":
-        #     flight.laser_archive_url = ...
-        #     flight.save(update_fields=['laser_archive_url'])
+            return JsonResponse({'success': True, 'data': dummy_result})
+        else:
+            errors = form.errors.as_json()
+            return JsonResponse({'success': False, 'error': errors})
 
-        return JsonResponse({'success': True, 'data': dummy_result})
+
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from .models import TempResultFile
+
+
+@method_decorator(login_required, name='dispatch')
+class UploadTempFileView(View):
+    """
+    Принимает файл, проверяет его (через формы или вручную),
+    сохраняет во TempResultFile. Возвращает ID созданного TempResultFile.
+    """
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
+
+        upload_type = request.POST.get('upload_type')  # ortho, laser и т.д.
+        if not upload_type:
+            return HttpResponseBadRequest("upload_type обязателен")
+
+        # Выбираем/создаем форму в зависимости от типа
+        # Можно переиспользовать те же формы: OrthoUploadForm, LaserUploadForm...
+        # но придется чуть адаптировать (т.к. там поля назваются по-другому).
+        # Либо создать TempUploadForm, которая обрабатывает любой файл/ссылку.
+
+        if upload_type == 'ortho':
+            form = OrthoUploadForm(request.POST, request.FILES)
+        elif upload_type == 'laser':
+            form = LaserUploadForm(request.POST, request.FILES)
+        elif upload_type == 'panorama':
+            form = PanoramaUploadForm(request.POST)
+        elif upload_type == 'overview':
+            form = OverviewUploadForm(request.POST, request.FILES)
+        else:
+            return JsonResponse({'success': False, 'error': 'Неверный тип загрузки'}, status=400)
+
+        if form.is_valid():
+            # Сохраняем во временной модели
+            if upload_type in ['ortho', 'laser']:
+                temp_file = form.cleaned_data['file']
+                view_link = form.cleaned_data.get('view_link')
+                temp_result = TempResultFile.objects.create(
+                    uploaded_by=request.user,
+                    result_type=upload_type,
+                    file=temp_file,
+                    view_link=view_link or '',
+                    file_size=temp_file.size
+                )
+                temp_id = temp_result.id
+            elif upload_type == 'panorama':
+                view_link = form.cleaned_data['view_link']
+                temp_result = TempResultFile.objects.create(
+                    uploaded_by=request.user,
+                    result_type=upload_type,
+                    file=None,
+                    view_link=view_link
+                )
+                temp_id = temp_result.id
+            elif upload_type == 'overview':
+                # Если у нас множественная загрузка
+                # Можно хранить несколько записей TempResultFile (по одной на файл) или один архив
+                files = request.FILES.getlist('files')
+                # Для упрощения предполагаем, что пользователь загружает сразу все
+                # Можно вернуть список ID, если нужно
+                created_ids = []
+                for f in files:
+                    temp_obj = TempResultFile.objects.create(
+                        uploaded_by=request.user,
+                        result_type=upload_type,
+                        file=f,
+                        file_size=f.size
+                    )
+                    created_ids.append(temp_obj.id)
+                # Возвращаем, например, список
+                temp_id = created_ids
+
+            return JsonResponse({
+                'success': True,
+                'temp_id': temp_id
+            })
+        else:
+            return JsonResponse({'success': False, 'error': form.errors}, status=400)
+
+
+@method_decorator(login_required, name='dispatch')
+class ConfirmTempFileView(View):
+    """
+    Принимает temp_id и request_id.
+    Переносит файл(ы) из TempResultFile -> FlightResultFile.
+    Удаляет запись(и) из TempResultFile.
+    """
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
+
+        temp_id = request.POST.get('temp_id')       # может быть список или одно число
+        request_id = request.POST.get('request_id')
+        if not temp_id or not request_id:
+            return HttpResponseBadRequest("temp_id и request_id обязательны")
+
+        try:
+            flight = FlightRequest.objects.get(pk=request_id)
+        except FlightRequest.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
+
+        # Забираем объекты из TempResultFile
+        # Возможно, temp_id - это список (особенно для overview)
+        # тогда можно сделать temp_id_list = json.loads(temp_id), если фронт так отправляет
+        # или передавать несколько temp_id[]=... в POST.
+        # Предположим, что у нас одна запись (ortho, laser, panorama) для простоты:
+        try:
+            temp_file = TempResultFile.objects.get(pk=temp_id, uploaded_by=request.user)
+        except TempResultFile.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Temp file не найден'}, status=404)
+
+        # "Переносим" файл
+        # Самый простой способ: создаём FlightResultFile, указываем flight_request, type, file, view_link
+        # Когда мы делаем .save(), Django не физически перемещает файл, а просто сохраняет путь.
+        # Но если надо именно физически переместить - придётся дописывать логику вручную.
+        final_obj = FlightResultFile.objects.create(
+            flight_request=flight,
+            result_type=temp_file.result_type,
+            file=temp_file.file,
+            view_link=temp_file.view_link,
+            file_size=temp_file.file_size
+        )
+
+        # Удаляем temp_file (физически файл тоже удалится, если не включена опция keep_files)
+        temp_file.delete()
+
+        return JsonResponse({'success': True, 'message': 'Файл подтверждён и перемещён'})
+
+
+@method_decorator(login_required, name='dispatch')
+class CancelTempFileView(View):
+    """
+    Удаляет временный файл (при отмене).
+    """
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
+
+        temp_id = request.POST.get('temp_id')
+        if not temp_id:
+            return HttpResponseBadRequest("temp_id обязателен")
+
+        try:
+            temp_file = TempResultFile.objects.get(pk=temp_id, uploaded_by=request.user)
+            # Удаляем физический файл из хранилища
+            if temp_file.file:
+                temp_file.file.delete(save=False)
+            temp_file.delete()
+            return JsonResponse({'success': True, 'message': 'Временный файл удалён'})
+        except TempResultFile.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Temp file не найден'}, status=404)
+

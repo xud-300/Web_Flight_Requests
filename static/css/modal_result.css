@@ -1,37 +1,180 @@
-/* Дополнительные стили для модального окна результатов */
+/* Стили карточек результатов */
 .result-section.card {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-}
-
-.result-section.card:hover {
+    margin-bottom: 20px; /* дополнительное расстояние между карточками */
+    border-radius: 8px; /* округление углов карточки */
+    background-color: #fff; /* белый фон */
+  }
+  
+  .result-section.card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-
-.upload-section {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Заголовки карточек */
+  .result-section .card-header {
+    font-size: 1.25rem;  /* увеличенный размер шрифта */
+    font-weight: 600;
+    color: #2c3e50;
+    background-color: #f7f7f7; /* светлый фон для заголовка */
+    border-bottom: 1px solid #e0e0e0;
+    padding: 12px 16px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+  
+  /* Тело карточек */
+  .result-section .card-body {
+    padding: 16px;
+  }
+  
+  /* Секция загрузки */
+  .upload-section {
     background-color: #f9f9f9;
     border: 1px dashed #ccc;
-    padding: 10px;
+    padding: 16px;
     margin-top: 10px;
+    border-radius: 8px;
+  }
+/* Drag-and-Drop зона */
+.drop-zone {
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 1rem;
+    cursor: pointer;
+    color: #666;
+    border: 2px dashed #4caf50;
+    border-radius: 8px;
+    background-color: #f8fffa;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  
+  .drop-zone:hover {
+    background-color: #e8fcef;
+    border-color: #43a047;
+  }
+  
+  .drop-zone--active {
+    background-color: #e8fcef;
+    border-color: #388e3c;
+    color: #388e3c;
+  }
+  
+  .drop-zone__prompt {
+    pointer-events: none;
+    user-select: none;
+  }
+  .drop-zone--disabled {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+  
+/* Внешний контейнер прогресса (управляем им через display) */
+.upload-progress {
+    margin-top: 10px;
+  }
+  
+  /* Внутренний блок с контуром (рамкой) */
+  .upload-progress-inner {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    background-color: #fff;       /* Белый фон внутри */
+    border: 1px solid #ccc;       /* Рамка (контур) */
+    border-radius: 4px;           /* Скруглённые углы */
+    overflow: hidden;             /* Обрезаем, если полоса выходит за границы */
+  }
+  
+  /* Полоса прогресса */
+  .upload-progress-bar {
+    width: 0;                     /* Изначально 0%, JS меняет при загрузке */
+    height: 100%;
+    background: linear-gradient(90deg, #28a745 0%, #34d058 100%); /* Зелёный градиент */
+    transition: width 0.3s ease;
+  }
+  
+  /* Текст прогресса */
+  .upload-progress-text {
+    margin-top: 8px;  /* Отступ, чтобы текст не прилегал к полосе */
+    font-size: 0.9rem;
+    color: #333;
+  }
+  
+  
+  
+  
+  /* Стили кнопок Сохранить */
+  .btn-primary.btn-sm {
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .btn-primary.btn-sm:hover {
+    background-color: #0069d9;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+  
+.btn-primary.btn-sm:disabled,
+.btn-primary.btn-sm[disabled] {
+  background-color: #007bff; /* тот же цвет, что и в обычном состоянии */
+  box-shadow: none;
+  cursor: not-allowed;
 }
-.result-section {
+
+.btn-primary.btn-sm:disabled:hover,
+.btn-primary.btn-sm[disabled]:hover {
+  background-color: #007bff; /* остаётся неизменным */
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+  
+  /* Стили кнопок отмены */
+  .btn-secondary.btn-sm {
+    transition: background-color 0.3s ease;
+  }
+  .btn-secondary.btn-sm:hover {
+    background-color: #c8c8c8;
+  }
+  
+  /* Стили для сообщений об ошибках */
+  .file-error {
+    margin-top: 4px;
+  }
+  
+  /* Модальное окно результатов */
+  .modal {
+    background: rgba(0, 0, 0, 0.5);
+  }
+  
+  .modal .modal-content {
+    border-radius: 16px;
     overflow: hidden;
-    transition: opacity 0.3s ease, max-height 0.3s ease;
-    opacity: 1;
-    max-height: 1000px; /* достаточно большое значение */
-}
-
-.result-section.hidden {
-    opacity: 0;
-    max-height: 0;
-}
-
-/* Адаптивность */
-@media (max-width: 768px) {
-    .result-section.card {
-        margin-bottom: 15px;
-    }
-}
-
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .modal .modal-header {
+    background: #f1f1f1;
+    padding: 16px 24px;
+    border-bottom: none;
+  }
+  
+  .modal .modal-title {
+    font-size: 20px;
+    font-weight: 500;
+    color: #000;
+  }
+  
+  .modal .close {
+    color: #6c757d;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+  
+  .modal .modal-body {
+    padding: 20px 24px;
+  }
   

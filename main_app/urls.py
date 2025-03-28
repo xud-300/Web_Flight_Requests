@@ -13,6 +13,9 @@ from .views import (
     mass_delete_requests,
     get_request_results,
     UploadResultView,
+    UploadTempFileView,
+    ConfirmTempFileView,
+    CancelTempFileView,
 )
 
 urlpatterns = [
@@ -27,4 +30,8 @@ urlpatterns = [
     path('requests/mass_delete/', mass_delete_requests, name='mass_delete_requests'),
     path('requests/get_results/', get_request_results, name='get_request_results'),
     path('requests/upload_result/', UploadResultView.as_view(), name='upload_result'),
+    path('requests/upload_temp_file/', UploadTempFileView.as_view(), name='upload_temp_file'),
+    path('requests/confirm_temp_file/', ConfirmTempFileView.as_view(), name='confirm_temp_file'),
+    path('requests/cancel_temp_file/', CancelTempFileView.as_view(), name='cancel_temp_file'),
+
 ]
