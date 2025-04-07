@@ -2,9 +2,9 @@
 .result-section.card {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-    margin-bottom: 20px; /* дополнительное расстояние между карточками */
-    border-radius: 8px; /* округление углов карточки */
-    background-color: #fff; /* белый фон */
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background-color: #fff;
   }
   
   .result-section.card:hover {
@@ -14,17 +14,16 @@
   
   /* Заголовки карточек */
   .result-section .card-header {
-    font-size: 1.25rem;  /* увеличенный размер шрифта */
+    font-size: 1.25rem;
     font-weight: 600;
     color: #2c3e50;
-    background-color: #f7f7f7; /* светлый фон для заголовка */
+    background-color: #f7f7f7;
     border-bottom: 1px solid #e0e0e0;
     padding: 12px 16px;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
   }
   
-  /* Тело карточек */
   .result-section .card-body {
     padding: 16px;
   }
@@ -37,6 +36,7 @@
     margin-top: 10px;
     border-radius: 8px;
   }
+
 /* Drag-and-Drop зона */
 .drop-zone {
     width: 100%;
@@ -74,40 +74,37 @@
     opacity: 0.6;
   }
   
-/* Внешний контейнер прогресса (управляем им через display) */
+/* Внешний контейнер прогресса */
 .upload-progress {
     margin-top: 10px;
   }
   
-  /* Внутренний блок с контуром (рамкой) */
+  /* Внутренний блок с рамкой */
   .upload-progress-inner {
     position: relative;
     width: 100%;
     height: 20px;
-    background-color: #fff;       /* Белый фон внутри */
-    border: 1px solid #ccc;       /* Рамка (контур) */
-    border-radius: 4px;           /* Скруглённые углы */
-    overflow: hidden;             /* Обрезаем, если полоса выходит за границы */
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
   }
   
   /* Полоса прогресса */
   .upload-progress-bar {
-    width: 0;                     /* Изначально 0%, JS меняет при загрузке */
+    width: 0;
     height: 100%;
-    background: linear-gradient(90deg, #28a745 0%, #34d058 100%); /* Зелёный градиент */
+    background: linear-gradient(90deg, #28a745 0%, #34d058 100%);
     transition: width 0.3s ease;
   }
   
   /* Текст прогресса */
   .upload-progress-text {
-    margin-top: 8px;  /* Отступ, чтобы текст не прилегал к полосе */
+    margin-top: 8px;
     font-size: 0.9rem;
     color: #333;
   }
-  
-  
-  
-  
+
   /* Стили кнопок Сохранить */
   .btn-primary.btn-sm {
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
@@ -119,19 +116,18 @@
   
 .btn-primary.btn-sm:disabled,
 .btn-primary.btn-sm[disabled] {
-  background-color: #007bff; /* тот же цвет, что и в обычном состоянии */
+  background-color: #007bff;
   box-shadow: none;
   cursor: not-allowed;
 }
 
 .btn-primary.btn-sm:disabled:hover,
 .btn-primary.btn-sm[disabled]:hover {
-  background-color: #007bff; /* остаётся неизменным */
+  background-color: #007bff;
   box-shadow: none;
   cursor: not-allowed;
 }
 
-  
   /* Стили кнопок отмены */
   .btn-secondary.btn-sm {
     transition: background-color 0.3s ease;
@@ -140,7 +136,7 @@
     background-color: #c8c8c8;
   }
   
-  /* Стили для сообщений об ошибках */
+  /* Для сообщений об ошибках */
   .file-error {
     margin-top: 4px;
   }

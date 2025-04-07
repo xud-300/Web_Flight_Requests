@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 class ObjectType(models.Model):
     id = models.AutoField(primary_key=True)
@@ -228,18 +229,15 @@ class TempResultFile(models.Model):
     """
     Модель для временного хранения файлов (до подтверждения пользователем).
     """
-    # Можно хранить ссылку на пользователя (кто загрузил), чтобы не путать файлы разных админов
-    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    # Тип результата (ortho, laser, overview, panorama) - чтобы понимать назначение файла
+    # Используем стандартную модель пользователя (по умолчанию — auth.User)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     result_type = models.CharField(max_length=20)
-    # Сам файл, складываем во временную папку 'temp_uploads'
     file = models.FileField(upload_to='temp_uploads/')
-    # Ссылка (если нужна, например для лазера или панорамы)
     view_link = models.URLField(blank=True, null=True)
-    # Размер файла (опционально)
     file_size = models.PositiveBigIntegerField(blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Temp file {self.file.name} (type={self.result_type})"
+
 

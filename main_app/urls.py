@@ -33,5 +33,4 @@ urlpatterns = [
     path('requests/upload_temp_file/', UploadTempFileView.as_view(), name='upload_temp_file'),
     path('requests/confirm_temp_file/', ConfirmTempFileView.as_view(), name='confirm_temp_file'),
     path('requests/cancel_temp_file/', CancelTempFileView.as_view(), name='cancel_temp_file'),
-
 ]

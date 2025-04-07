@@ -319,14 +319,13 @@ def delete_flight_request(request, pk):
     flight_request.delete()
     return JsonResponse({'success': True})
 
-
+import os
 @require_GET
 @login_required
 def get_request_results(request):
     """
     Возвращает данные результатов съёмки для заявки.
-    Ожидается GET параметр request_id.
-    Если заявка не найдена или request_id не передан, возвращает ошибку.
+    Если в заявке установлен тип съемки, но файлов нет – возвращаются заглушки.
     """
     request_id = request.GET.get('request_id')
     if not request_id:
@@ -337,43 +336,75 @@ def get_request_results(request):
     except FlightRequest.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
     
-    # Формируем объект данных для каждого типа съемки,
-    # если соответствующий флаг (orthophoto, laser, panorama, overview) установлен в заявке.
     data = {}
-    
-    # Безопасная функция для получения атрибутов (чтобы не вызывать ошибку, если поля нет)
-    def safe_getattr(obj, attr_name, default=None):
-        return getattr(obj, attr_name, default)
 
     # Ортофотоплан
-    if getattr(flight, 'orthophoto', False):
-        data['orthophoto'] = {
-            'download_link': safe_getattr(flight, 'ortho_archive_url', '#'),
-            'archive_name': safe_getattr(flight, 'ortho_archive_name', 'ortho_archive.zip')
-        }
-    
-    # Лазерное сканирование
-    if getattr(flight, 'laser', False):
-        data['laser'] = {
-            'download_link': safe_getattr(flight, 'laser_archive_url', '#'),
-            'view_link': safe_getattr(flight, 'laser_view_url', '#')
-        }
-    
-    # Панорама
-    if getattr(flight, 'panorama', False):
-        data['panorama'] = {
-            'view_link': safe_getattr(flight, 'panorama_view_url', '#')
-        }
-    
-    # Обзорные фото
-    if getattr(flight, 'overview', False):
-        data['overview'] = {
-            'download_link': safe_getattr(flight, 'overview_archive_url', '#'),
-            'view_link': safe_getattr(flight, 'overview_view_url', '#')
-        }
-    
-    return JsonResponse(data)
+    if flight.orthophoto:
+        ortho_files = FlightResultFile.objects.filter(flight_request=flight, result_type='ortho')
+        if ortho_files.exists():
+            file_obj = ortho_files.first()
+            data['orthophoto'] = {
+                'id': file_obj.id,
+                'download_link': file_obj.file.url if file_obj.file else '#',
+                'archive_name': os.path.basename(file_obj.file.name) if file_obj.file else 'Файл не найден'
+            }
+        else:
+            data['orthophoto'] = {
+                'download_link': '#',
+                'archive_name': 'Файлы для скачивания ещё не добавлены'
+            }
 
+    # Лазерное сканирование
+    if flight.laser:
+        laser_files = FlightResultFile.objects.filter(flight_request=flight, result_type='laser')
+        if laser_files.exists():
+            file_obj = laser_files.first()
+            data['laser'] = {
+                'id': file_obj.id,
+                'download_link': file_obj.file.url if file_obj.file else '#',
+                'archive_name': os.path.basename(file_obj.file.name) if file_obj.file else 'Файл не найден',
+                'view_link': file_obj.view_link or '#'
+            }
+        else:
+            data['laser'] = {
+                'download_link': '#',
+                'archive_name': 'Файлы для скачивания ещё не добавлены',
+                'view_link': '#'
+            }
+
+    # Панорама
+    if flight.panorama:
+        panorama_files = FlightResultFile.objects.filter(flight_request=flight, result_type='panorama')
+        if panorama_files.exists():
+            file_obj = panorama_files.first()
+            data['panorama'] = {
+                'id': file_obj.id,
+                'view_link': file_obj.view_link or '#'
+            }
+        else:
+            data['panorama'] = {
+                'view_link': '#'
+            }
+
+    # Обзорные фото
+    if flight.overview:
+        overview_files = FlightResultFile.objects.filter(flight_request=flight, result_type='overview')
+        if overview_files.exists():
+            file_obj = overview_files.first()
+            data['overview'] = {
+                'id': file_obj.id,
+                'download_link': file_obj.file.url if file_obj.file else '#',
+                'archive_name': os.path.basename(file_obj.file.name) if file_obj.file else 'Файл не найден',
+                'view_link': file_obj.view_link or '#'
+            }
+        else:
+            data['overview'] = {
+                'download_link': '#',
+                'archive_name': 'Файлы для скачивания ещё не добавлены',
+                'view_link': '#'
+            }
+
+    return JsonResponse(data)
 
 
 @method_decorator(login_required, name='dispatch')
@@ -406,50 +437,63 @@ class UploadResultView(View):
             form = OverviewUploadForm(request.POST, request.FILES)
         else:
             return JsonResponse({'success': False, 'error': 'Неверный тип загрузки'}, status=400)
-        
+
         if form.is_valid():
-            if upload_type in ['ortho', 'laser']:
-                # Сохраняем один файл
-                file = form.cleaned_data.get('file')
-                view_link = form.cleaned_data.get('view_link') if upload_type == 'laser' else None
-                result_file = FlightResultFile.objects.create(
-                    flight_request=flight,
-                    result_type=upload_type,
-                    file=file,
-                    view_link=view_link,
-                    file_size=file.size
-                )
-            elif upload_type == 'panorama':
-                # Только ссылка
+            if upload_type == 'ortho':
+                # Используем новое имя поля "orthoFile"
+                temp_file = form.cleaned_data['orthoFile']
                 view_link = form.cleaned_data.get('view_link')
-                result_file = FlightResultFile.objects.create(
-                    flight_request=flight,
+                temp_result = TempResultFile.objects.create(
+                    uploaded_by=request.user,
                     result_type=upload_type,
+                    file=temp_file,
+                    view_link=view_link or '',
+                    file_size=temp_file.size
+                )
+                temp_id = temp_result.id
+            elif upload_type == 'laser':
+                # Используем новое имя поля "laserFile"
+                temp_file = form.cleaned_data['laserFile']
+                view_link = form.cleaned_data.get('laserViewInput') or ''
+                temp_result = TempResultFile.objects.create(
+                    uploaded_by=request.user,
+                    result_type=upload_type,
+                    file=temp_file,
+                    view_link=view_link,
+                    file_size=temp_file.size
+                )
+                temp_id = temp_result.id
+            elif upload_type == 'panorama':
+                view_link = form.cleaned_data['panoramaViewInput']
+                temp_result = TempResultFile.objects.create(
+                    uploaded_by=request.user,
+                    result_type=upload_type,
+                    file=None,
                     view_link=view_link
                 )
+                temp_id = temp_result.id
             elif upload_type == 'overview':
-                files = request.FILES.getlist('files')
-                created_files = []
+                # Здесь имя поля должно быть "overviewFiles"
+                files = request.FILES.getlist('overviewFiles')
+                created_ids = []
                 for f in files:
-                    rf = FlightResultFile.objects.create(
-                        flight_request=flight,
+                    temp_obj = TempResultFile.objects.create(
+                        uploaded_by=request.user,
                         result_type=upload_type,
                         file=f,
                         file_size=f.size
                     )
-                    created_files.append(rf)
-            # Формируем dummy-ответ, можно вернуть актуальные ссылки, если они вычисляются
-            dummy_result = {
-                upload_type: {
-                    "download_link": f"/media/flight_results/{upload_type}_archive_updated.zip",  # или вычислить по-новому
-                    "view_link": f"/results/{upload_type}_view/?id={request_id}",
-                    "archive_name": f"{upload_type}_archive_updated.zip"
-                }
-            }
-            return JsonResponse({'success': True, 'data': dummy_result})
+                    created_ids.append(temp_obj.id)
+                temp_id = created_ids
+
+            return JsonResponse({
+                'success': True,
+                'temp_id': temp_id
+            })
         else:
             errors = form.errors.as_json()
-            return JsonResponse({'success': False, 'error': errors})
+            return JsonResponse({'success': False, 'error': errors}, status=400)
+
 
 
 from django.views.decorators.csrf import csrf_exempt
@@ -476,7 +520,6 @@ class UploadTempFileView(View):
         # Можно переиспользовать те же формы: OrthoUploadForm, LaserUploadForm...
         # но придется чуть адаптировать (т.к. там поля назваются по-другому).
         # Либо создать TempUploadForm, которая обрабатывает любой файл/ссылку.
-
         if upload_type == 'ortho':
             form = OrthoUploadForm(request.POST, request.FILES)
         elif upload_type == 'laser':
@@ -489,9 +532,21 @@ class UploadTempFileView(View):
             return JsonResponse({'success': False, 'error': 'Неверный тип загрузки'}, status=400)
 
         if form.is_valid():
-            # Сохраняем во временной модели
-            if upload_type in ['ortho', 'laser']:
-                temp_file = form.cleaned_data['file']
+            if upload_type == 'ortho':
+                # Используем ключ "orthoFile" вместо "file"
+                temp_file = form.cleaned_data['orthoFile']
+                view_link = form.cleaned_data.get('view_link')
+                temp_result = TempResultFile.objects.create(
+                    uploaded_by=request.user,
+                    result_type=upload_type,
+                    file=temp_file,
+                    view_link=view_link or '',
+                    file_size=temp_file.size
+                )
+                temp_id = temp_result.id
+            elif upload_type == 'laser':
+                # Используем ключ "laserFile" вместо "file"
+                temp_file = form.cleaned_data['laserFile']
                 view_link = form.cleaned_data.get('view_link')
                 temp_result = TempResultFile.objects.create(
                     uploaded_by=request.user,
@@ -502,7 +557,7 @@ class UploadTempFileView(View):
                 )
                 temp_id = temp_result.id
             elif upload_type == 'panorama':
-                view_link = form.cleaned_data['view_link']
+                view_link = form.cleaned_data['panoramaViewInput']
                 temp_result = TempResultFile.objects.create(
                     uploaded_by=request.user,
                     result_type=upload_type,
@@ -511,11 +566,8 @@ class UploadTempFileView(View):
                 )
                 temp_id = temp_result.id
             elif upload_type == 'overview':
-                # Если у нас множественная загрузка
-                # Можно хранить несколько записей TempResultFile (по одной на файл) или один архив
-                files = request.FILES.getlist('files')
-                # Для упрощения предполагаем, что пользователь загружает сразу все
-                # Можно вернуть список ID, если нужно
+                # Здесь имя поля должно быть "overviewFiles"
+                files = request.FILES.getlist('overviewFiles')
                 created_ids = []
                 for f in files:
                     temp_obj = TempResultFile.objects.create(
@@ -525,7 +577,6 @@ class UploadTempFileView(View):
                         file_size=f.size
                     )
                     created_ids.append(temp_obj.id)
-                # Возвращаем, например, список
                 temp_id = created_ids
 
             return JsonResponse({
@@ -533,13 +584,15 @@ class UploadTempFileView(View):
                 'temp_id': temp_id
             })
         else:
-            return JsonResponse({'success': False, 'error': form.errors}, status=400)
+            errors = form.errors.as_json()
+            return JsonResponse({'success': False, 'error': errors}, status=400)
+
 
 
 @method_decorator(login_required, name='dispatch')
 class ConfirmTempFileView(View):
     """
-    Принимает temp_id и request_id.
+    Принимает temp_id, request_id и view_link.
     Переносит файл(ы) из TempResultFile -> FlightResultFile.
     Удаляет запись(и) из TempResultFile.
     """
@@ -547,42 +600,50 @@ class ConfirmTempFileView(View):
         if not request.user.is_staff:
             return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
 
-        temp_id = request.POST.get('temp_id')       # может быть список или одно число
+        temp_id = request.POST.get('temp_id')
         request_id = request.POST.get('request_id')
+        view_link = request.POST.get('view_link', '')  # Получаем view_link, если передано, иначе пустая строка
+
         if not temp_id or not request_id:
-            return HttpResponseBadRequest("temp_id и request_id обязательны")
+            return HttpResponseBadRequest("temp_id и request_id обязательны.")
 
         try:
             flight = FlightRequest.objects.get(pk=request_id)
         except FlightRequest.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
 
-        # Забираем объекты из TempResultFile
-        # Возможно, temp_id - это список (особенно для overview)
-        # тогда можно сделать temp_id_list = json.loads(temp_id), если фронт так отправляет
-        # или передавать несколько temp_id[]=... в POST.
-        # Предположим, что у нас одна запись (ortho, laser, panorama) для простоты:
         try:
             temp_file = TempResultFile.objects.get(pk=temp_id, uploaded_by=request.user)
         except TempResultFile.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Temp file не найден'}, status=404)
 
-        # "Переносим" файл
-        # Самый простой способ: создаём FlightResultFile, указываем flight_request, type, file, view_link
-        # Когда мы делаем .save(), Django не физически перемещает файл, а просто сохраняет путь.
-        # Но если надо именно физически переместить - придётся дописывать логику вручную.
-        final_obj = FlightResultFile.objects.create(
+        # Обновляем поле view_link в temp_file, если новое значение передано
+        temp_file.view_link = view_link
+        temp_file.save()
+
+        # Создаем объект FlightResultFile, копируя значение view_link из temp_file
+        final_obj = FlightResultFile(
             flight_request=flight,
             result_type=temp_file.result_type,
-            file=temp_file.file,
             view_link=temp_file.view_link,
             file_size=temp_file.file_size
         )
 
-        # Удаляем temp_file (физически файл тоже удалится, если не включена опция keep_files)
+        if temp_file.file:
+            import os
+            filename = os.path.basename(temp_file.file.name)
+            with temp_file.file.open('rb') as f:
+                final_obj.file.save(filename, f, save=False)
+
+        final_obj.save()
+
+        # Удаляем temp_file и его физический файл из временного хранилища
+        if temp_file.file:
+            temp_file.file.delete(save=False)
         temp_file.delete()
 
         return JsonResponse({'success': True, 'message': 'Файл подтверждён и перемещён'})
+
 
 
 @method_decorator(login_required, name='dispatch')

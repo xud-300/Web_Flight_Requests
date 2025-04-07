@@ -1,6 +1,6 @@
 /* Общие стили для страницы */
 body {
-    background-color: #f5f7fa; /* светлый, нейтральный фон */
+    background-color: #f5f7fa;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #333;
   }
@@ -22,28 +22,24 @@ body {
 
 /* Кнопка создания заявки */
 .btn-create {
-  background-color: #007bff;   /* Фирменный синий цвет */
+  background-color: #007bff;
   border: none;
   color: #fff;
-  border-radius: 24px;         /* Пилюльная форма */
-  padding: 0.75rem 1.5rem;      /* Увеличенные внутренние отступы */
-  font-size: 1.2rem;           /* Чуть крупнее */
+  padding: 0.75rem 1.5rem;
+  font-size: 1.2rem;
   font-weight: 600;
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Эффект при наведении */
 .btn-create:hover {
-  background-color: #0069d9;   /* Немного темнее */
+  background-color: #0069d9;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Отступ для иконки внутри кнопки */
 .btn-create i {
   margin-right: 8px;
 }
-
-
   
   /* Кнопка "Создать заявку" */
   .btn-primary.btn-lg {
@@ -61,62 +57,56 @@ body {
     font-size: 1rem;
     font-weight: 500;
   }
-  /* Округлим все “outline”-кнопки Bootstrap */
+
   .btn-outline-secondary,
   .btn-outline-success,
   .btn-outline-danger,
   .btn-outline-primary {
-    border-radius: 12px; /* значение подберите на свой вкус */
+    border-radius: 12px;
   }
 
-  /* Если хотите, чтобы и обычные btn-primary/btn-secondary и т.д. тоже имели
-    закругление, можно прописать просто для всех .btn */
   .btn {
     border-radius: 12px;
   }
 
 /* Общие стили для таблицы */
 .table {
-  width: 100%;             /* при необходимости */
-  table-layout: auto;      /* или fixed, если задаёте жёсткие ширины столбцов */
+  width: 100%;
+  table-layout: auto;
   border: none;
   border-radius: 6px;
-  overflow: hidden;        /* позволяет «скруглить» углы таблицы */
+  overflow: hidden;
 }
 
-/* Зебра-окраска для .table-striped */
+/* Зебра-окраска */
 .table-striped tbody tr:nth-of-type(odd) {
   background-color: #f8f9fa;
 }
 
-/* Hover-эффект для .table-hover */
 .table-hover tbody tr:hover {
   background-color: #eef3f8;
 }
 
 .table-hover tbody tr.disabled-row:hover {
-  background-color: inherit; /* или установите конкретный цвет, например, тот же, что для не-hover состояния */
+  background-color: inherit;
 }
 
 
 /* Шапка таблицы */
 .table thead th {
-  background-color: #2c3e50; /* или #34495e */
+  background-color: #2c3e50;
   color: #fff;
   border: none;
   text-transform: uppercase;
   font-size: 0.9rem;
   letter-spacing: 0.05rem;
   font-weight: 600;
-  /* При желании можно скруглить углы шапки (если поддерживается):
-     &:first-child { border-top-left-radius: 6px; }
-     &:last-child  { border-top-right-radius: 6px; } */
 }
 
 /* Тело таблицы */
 .table tbody td {
   vertical-align: middle;
-  border-color: #dee2e6; /* цвет разделительных линий */
+  border-color: #dee2e6;
   font-size: 0.9rem;
   color: #2c3e50;
   padding: 0.75rem;
@@ -124,105 +114,87 @@ body {
 
 /* Ссылки в шапке таблицы (thead) */
 .table thead th a {
-  color: #fff;                /* Белый цвет текста */
-  text-decoration: none;      /* Без подчёркивания */
+  color: #fff;
+  text-decoration: none;
   transition: color 0.2s ease;
-  display: inline-flex;        /* текст + иконка в одну линию */
-  align-items: center;         /* выравниваем иконку по центру */
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;   
 }
 
-/* При наведении меняем цвет на светло-серый */
 .table thead th a:hover {
-  color: #6c757d;                /* Серый при hover */
+  color: #6c757d;
   text-decoration: none;
 }
 
-/* Стили для иконок сортировки */
 .sort-icon {
   margin-left: 4px;
   transition: opacity 0.2s ease;
-  /* Если столбец отсортирован, иконка уже видна (выше в шаблоне) */
-  /* Можем указать opacity: 0.6, чтобы была полупрозрачной */
   opacity: 0.6;
 }
 
-/* Иконка "fa-sort" по умолчанию скрыта (или почти скрыта), 
-   если столбец не отсортирован. */
 .default-sort-icon {
-  opacity: 0; /* полностью скрыта */
+  opacity: 0;
 }
 
-/* При наведении на ссылку (название столбца) 
-   показываем/делаем ярче иконку */
 .table thead th a:hover .sort-icon {
-  opacity: 1; /* иконка становится полностью видимой */
+  opacity: 1;
   white-space: nowrap;
 }
 
-/* Аналогично, если иконка была default-sort-icon, 
-   она при hover тоже становится видимой. */
 .table thead th a:hover .default-sort-icon {
-  opacity: 0.6; /* или 1, если хотите */
+  opacity: 0.6;
 }
 
-
-/* Иконки сортировки внутри ссылок */
 .table thead th a i {
-  opacity: 0.6;               /* Полупрозрачная иконка по умолчанию */
+  opacity: 0.6;
   transition: opacity 0.2s ease;
-  margin-left: 4px;           /* Небольшой отступ от текста */
+  margin-left: 4px;
 }
 
-/* При наведении на ссылку иконка становится полностью видимой */
 .table thead th a:hover i {
   opacity: 1;
 }
 
 
-/* «Пилюльные» бейджи */
+/* бейджи */
 .badge {
   font-size: 0.8rem;
   padding: 0.3rem 0.6rem;
   border-radius: 12px;
-  /* при необходимости меняйте цвет, фон и т.д. */
 }
 
-/* Пример стилей для бейджей по статусам */
 .badge-success {
-  background-color: #28a745; /* Зеленый для "Новая" или "В работе" */
+  background-color: #28a745;
   color: #fff;
   padding: 0.4rem 0.8rem;
   border-radius: 14px;
   font-size: 0.9rem; 
 }
 .badge-primary {
-  background-color: #3498db; /* Синий для "В работе", если требуется */
+  background-color: #3498db;
   color: #fff;
   padding: 0.4rem 0.8rem;
   border-radius: 14px;
   font-size: 0.9rem; 
 }
 .badge-secondary {
-  background-color: #6c757d; /* Серый для "Выполнена" */
+  background-color: #6c757d;
   color: #fff;
   padding: 0.4rem 0.8rem;
   border-radius: 14px;
   font-size: 0.9rem; 
 }
 
-
-
 /* Выделение выбранной строки */
 tr.selected {
-  background-color: #eef3f8; /* Светлый фон для выделенной строки */
-  /* Можно добавить рамку или другие стили по вкусу */
+  background-color: #eef3f8;
 }
 
-/* Стили для кликабельных бейджей */
+/* Для кликабельных бейджей */
 .selectable-status {
-  cursor: pointer;               /* Меняем курсор на pointer */
-  transition: transform 0.1s ease; /* Плавное изменение при наведении */
+  cursor: pointer;
+  transition: transform 0.1s ease;
 }
 
 .selectable-status:hover {
@@ -233,7 +205,6 @@ tr.selected {
 .selectable-status.active {
   transform: scale(1.05);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  /* Если нужно, можно добавить transition, но его уже задали для .selectable-status */
 }
 
 .selectable-status.no-hover:hover {
@@ -241,50 +212,45 @@ tr.selected {
   box-shadow: none !important;
 }
 
-
-
-/* Контейнер для вывода типа съёмки (кружок + текст + иконка). 
-   Если нужен столбик — используйте display: block или flex-колонку. 
-   Если нужно в строку — display: inline-flex. */
 .shooting-type {
   display: inline-flex;
   align-items: center;
-  margin-bottom: 4px;   /* отступ между «строками» */
-  margin-right: 8px;    /* если несколько типов идут в одну строку */
+  margin-bottom: 4px;
+  margin-right: 8px;
   font-size: 0.9rem;
 }
 
-/* Сам кружочек (dot) */
+/* dot */
 .shooting-type .dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  margin-right: 4px;  /* отступ между кружочком и текстом */
+  margin-right: 4px;
 }
 
 /* Разные цвета кружков под разные типы */
 .dot-orthophoto {
-  background-color: #3498db; /* синий */
+  background-color: #3498db;
 }
 .dot-laser {
-  background-color: #f39c12; /* оранжевый */
+  background-color: #f39c12;
 }
 .dot-panorama {
-  background-color: #9b59b6; /* фиолетовый */
+  background-color: #9b59b6;
 }
 .dot-overview {
-  background-color: #95a5a6; /* серый */
+  background-color: #95a5a6;
 }
 
 /* Ограничение ширины для столбца «Примечание» */
 .note-column {
-  width: 200px;               /* или max-width: 200px; */
-  white-space: normal;        /* разрешаем перенос строк */
-  word-wrap: break-word;      /* старый синтаксис для переноса */
-  overflow-wrap: break-word;  /* современный синтаксис для переноса */
+  width: 200px;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
-/* Выравнивание по центру для столбцов 1 и 2 (пример) */
+/* Выравнивание по центру для столбцов 1 и 2и*/
 .table thead th:nth-child(1),
 .table thead th:nth-child(2) {
   text-align: center;
@@ -296,44 +262,41 @@ tr.selected {
 
 /* Общий контейнер для каждой строки типа съемки */
 .shooting-type {
-  display: flex;             /* В ряд, чтобы элементы были на одной линии */
-  align-items: center;       /* Выравниваем иконку, текст и кружок по вертикали */
+  display: flex;
+  align-items: center;
   justify-content: flex-start; 
-  margin-bottom: 4px;        /* Небольшой отступ между строками */
+  margin-bottom: 4px;
 }
 
-/* Небольшой цветной кружок слева */
 .shooting-circle {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  margin-right: 6px;         /* Отступ от кружка до текста */
+  margin-right: 6px;
 }
 
-/* Отступ между текстом и иконкой */
 .shooting-type i {
   margin-left: 6px;  
   color: #555;
   font-size: 0.9rem;
 }
 
-/* Пример: делаем текст немного жирнее */
 .shooting-type span {
   font-weight: 500;
 }
 
 /* Цвета кружков для каждого вида съёмки */
 .shooting-orthophoto .shooting-circle {
-  background-color: #3498db; /* Синий */
+  background-color: #3498db;
 }
 .shooting-laser .shooting-circle {
-  background-color: #f39c12; /* Оранжевый */
+  background-color: #f39c12;
 }
 .shooting-panorama .shooting-circle {
-  background-color: #9b59b6; /* Фиолетовый */
+  background-color: #9b59b6;
 }
 .shooting-overview .shooting-circle {
-  background-color: #95a5a6; /* Серый */
+  background-color: #95a5a6;
 }
 
 
@@ -351,16 +314,14 @@ tr.selected {
 
 
 
-/* Уменьшаем иконки сортировки (если нужно) */
+/* Уменьшаем иконки сортировки */
 .fas.fa-sort-up, .fas.fa-sort-down {
   font-size: 0.75rem;
   margin-left: 4px;
-  color: #ddd; /* или #fff, если на тёмном фоне */
+  color: #ddd;
 }
 
 
-
-  
   /* Модальные окна */
   .modal {
     position: fixed;
@@ -370,7 +331,7 @@ tr.selected {
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     z-index: 1050;
-    display: none; /* скрыто по умолчанию */
+    display: none;
     align-items: center;
     justify-content: center;
   }
@@ -386,7 +347,6 @@ tr.selected {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   }
   
-  /* Заголовок модального окна */
   .modal-header {
     background: #f1f1f1;
     padding: 15px;
@@ -398,7 +358,6 @@ tr.selected {
     color: #2c3e50;
   }
   
-  /* Тело модального окна */
   .modal-body {
     padding: 20px;
   }

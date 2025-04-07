@@ -105,6 +105,12 @@ STATIC_ROOT = env('STATIC_ROOT')
 LOGIN_REDIRECT_URL = 'main_page'
 LOGOUT_REDIRECT_URL = '/'
 
+# Папка, в которую будут сохраняться все загруженные файлы
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# URL, по которому файлы будут доступны
+MEDIA_URL = '/media/'
+
 # Настройки по умолчанию для первичных ключей
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

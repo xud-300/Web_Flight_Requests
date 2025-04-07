@@ -1,55 +1,51 @@
 
   
 
-  /* 1) Модальное окно и его содержимое */
+/* Модальное окно и его содержимое */
 .modal-content {
-  /* Белый фон, округлые углы, тень */
   background-color: #FFFFFF;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* 2) Шапка модального окна */
+/* Шапка модального окна */
 .modal-header {
-  border-bottom: none; /* убираем линию, если хочется более «чистый» вид */
+  border-bottom: none;
   padding: 16px 24px;
 }
 .modal-header .modal-title {
   font-size: 20px;
   font-weight: 500;
-  color: #000; /* чёрный текст */
+  color: #000;
 }
 .modal-header .close {
-  /* кнопка «x» может оставаться стандартной, 
-     либо задать ей цвет, например, #6c757d (серый) */
   color: #6c757d;
 }
 
-/* 3) Тело модального окна */
 .modal-body {
   padding: 20px 24px;
 }
 
-/* 4) Общий вид форм */
+/* Общий вид форм */
 .form-group label {
   font-weight: 500;
-  color: #000; /* чёрный текст */
+  color: #000;
 }
 .form-control {
   border-radius: 8px;
-  border-color: #CED4DA; /* серый */
-  color: #000;           /* чёрный текст */
+  border-color: #CED4DA;
+  color: #000;
   background-color: #fff;
 }
 .form-control:focus {
-  border-color: #0d6efd; /* синий */
+  border-color: #0d6efd;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25); /* мягкая подсветка */
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
 }
 
-/* 5) Кнопки */
+/* Кнопки */
 .btn-primary {
-  background-color: #0d6efd; /* синий */
+  background-color: #0d6efd;
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -57,11 +53,11 @@
   padding: 8px 16px;
 }
 .btn-primary:hover {
-  background-color: #0b5ed7; /* немного темнее синий */
+  background-color: #0b5ed7;
 }
 
 .btn-secondary {
-  background-color: #E5E7EB; /* светло-серый */
+  background-color: #E5E7EB;
   color: #000;
   border: none;
   border-radius: 8px;
@@ -72,49 +68,46 @@
   background-color: #D1D5DB;
 }
 
-/* 6) Пикеты (поля input) */
+/* Пикеты */
 #piketContainer .input-group-text {
-  background-color: #E5E7EB; /* светло-серый фон лейбла «От ПК»/«До ПК» */
+  background-color: #E5E7EB;
   border: none; 
   color: #000;
-  border-radius: 8px 0 0 8px; /* можно дополнительно округлить слева */
+  border-radius: 8px 0 0 8px;
 }
 #piketContainer .form-control {
-  border-radius: 0 8px 8px 0; /* округление справа */
+  border-radius: 0 8px 8px 0;
 }
 
-/* 7) Диапазон дат */
-/* Обертка для иконки и поля */
+/* Диапазон дат */
 #id_create_date_range_wrapper .input-group-text {
-  border-radius: 8px 0 0 8px; /* скругление только слева */
-  border-right: none;         /* убрать двойную границу */
-  background-color: #E5E7EB;  /* или другой серый фон */
+  border-radius: 8px 0 0 8px;
+  border-right: none;
+  background-color: #E5E7EB;
 }
 
 #id_create_date_range_wrapper .form-control {
-  border-radius: 0 8px 8px 0; /* скругление только справа */
-  border-left: none;          /* убрать двойную границу */
+  border-radius: 0 8px 8px 0;
+  border-left: none;
 }
 
-/* 8) Тип съёмки (кнопки) */
-/* На всякий случай скрываем сам чекбокс, если Bootstrap 5 этого не сделал */
+/* Тип съёмки */
 .shooting-check {
   display: none !important;
 }
 
-/* При выборе чекбокса меняем цвет кнопки */
 .shooting-check:checked + .btn-outline-primary {
-  background-color: #0d6efd;  /* Основной цвет Bootstrap */
+  background-color: #0d6efd;
   color: #fff;
   border-color: #0d6efd;
 }
-/* При невыбранном чекбоксе кнопка остаётся Outline */
+
 .shooting-check:not(:checked) + .btn-outline-primary {
   background-color: transparent;
   color: #0d6efd;
   border-color: #0d6efd;
 }
-/* 9) Поле "Примечание" */
+/* Поле "Примечание" */
 #id_note {
   border-radius: 8px;
   color: #000;
@@ -123,9 +116,9 @@
   padding: 8px 12px;
 }
 
-/* 10) Ошибки */
+/* Ошибки */
 .invalid-feedback {
-  color: #dc3545; /* красный для ошибок, если нужно */
+  color: #dc3545;
   margin-top: 4px;
   font-size: 14px;
 }
