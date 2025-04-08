@@ -1,0 +1,288 @@
+[33mcommit 4a4debaf88b932037de1f3f08549ec3805f21ed6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Tue Apr 8 08:59:16 2025 +0700
+
+    Add /media/ to .gitignore
+
+ .gitignore | 3 [32m++[m[31m-[m
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+[33mcommit f789f6839da3843470de78ad5080d72af5085efc[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Mon Apr 7 16:31:50 2025 +0700
+
+    Сохранение файлов, загрузка для пользоватлей, в разделах для ортофотоплано, лазерного скнирование, и сохранение ссылок для панорам
+
+ auth_template/__pycache__/settings.cpython-311.pyc | Bin [31m4031[m -> [32m4158[m bytes
+ auth_template/__pycache__/urls.cpython-311.pyc     | Bin [31m903[m -> [32m1206[m bytes
+ auth_template/settings.py                          |   6 [32m+[m
+ auth_template/urls.py                              |   6 [32m+[m
+ main_app/__pycache__/models.cpython-311.pyc        | Bin [31m13124[m -> [32m13214[m bytes
+ main_app/__pycache__/upload_forms.cpython-311.pyc  | Bin [31m5836[m -> [32m5913[m bytes
+ main_app/__pycache__/urls.cpython-311.pyc          | Bin [31m2456[m -> [32m2456[m bytes
+ main_app/__pycache__/views.cpython-311.pyc         | Bin [31m30981[m -> [32m33595[m bytes
+ ...history_changed_by_flightresultfile_and_more.py |  45 [32m++[m
+ ...ed_by_flightresultfile_and_more.cpython-311.pyc | Bin [31m0[m -> [32m3149[m bytes
+ main_app/models.py                                 |  10 [32m+[m[31m-[m
+ main_app/templates/main_app/modal_result.html      | 115 [32m++[m[31m--[m
+ main_app/upload_forms.py                           |  38 [32m+[m[31m-[m
+ main_app/urls.py                                   |   1 [31m-[m
+ main_app/views.py                                  | 237 [32m+++++[m[31m---[m
+ static/css/modal_create.css                        |  67 [32m+[m[31m--[m
+ static/css/modal_result.css                        |  42 [32m+[m[31m-[m
+ static/css/requests_list.css                       | 153 [32m++[m[31m---[m
+ static/js/modal_result.js                          | 629 [32m+++++++++++++[m[31m--------[m
+ static/js/requests_list.js                         |  44 [32m+[m[31m-[m
+ 20 files changed, 831 insertions(+), 562 deletions(-)
+
+[33mcommit 5fec9d4a80d1ba56a41ca6b1439780ba4d3b7d0b[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Fri Mar 28 14:42:29 2025 +0700
+
+    Доработаныый стиль секции загрузки
+
+ main_app/__pycache__/models.cpython-311.pyc       | Bin [31m10757[m -> [32m13124[m bytes
+ main_app/__pycache__/upload_forms.cpython-311.pyc | Bin [31m0[m -> [32m5836[m bytes
+ main_app/__pycache__/urls.cpython-311.pyc         | Bin [31m1937[m -> [32m2456[m bytes
+ main_app/__pycache__/views.cpython-311.pyc        | Bin [31m22557[m -> [32m30981[m bytes
+ main_app/models.py                                |  41 [32m++[m
+ main_app/templates/main_app/modal_result.html     | 319 [32m++++++[m[31m-----[m
+ main_app/upload_forms.py                          |  78 [32m+++[m
+ main_app/urls.py                                  |   7 [32m+[m
+ main_app/views.py                                 | 253 [32m+++++++[m[31m--[m
+ static/css/modal_result.css                       | 195 [32m++++++[m[31m-[m
+ static/js/modal_result.js                         | 653 [32m++++++++++++++++[m[31m------[m
+ 11 files changed, 1173 insertions(+), 373 deletions(-)
+
+[33mcommit 677de1bf7da8dfcc4e39ef621ec761f1ecb918e0[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Wed Mar 26 15:37:38 2025 +0700
+
+    Окно с резултатами, логика отображения и тд (зачатки)
+
+ main_app/__pycache__/urls.cpython-311.pyc      | Bin [31m1657[m -> [32m1937[m bytes
+ main_app/__pycache__/views.cpython-311.pyc     | Bin [31m18318[m -> [32m22557[m bytes
+ main_app/templates/main_app/modal_result.html  | 164 [32m+++++++++++++++++++++[m
+ main_app/templates/main_app/requests_list.html |  13 [32m++[m
+ main_app/urls.py                               |   4 [32m+[m
+ main_app/views.py                              | 112 [32m++++++++++++++[m[31m-[m
+ static/css/modal_result.css                    |  37 [32m+++++[m
+ static/js/modal_result.js                      | 192 [32m+++++++++++++++++++++++++[m
+ static/js/requests_list.js                     |  43 [32m++++++[m
+ 9 files changed, 562 insertions(+), 3 deletions(-)
+
+[33mcommit e6abdea4d5762eda609eb4db8976fc69efd47b0a[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Tue Mar 25 16:20:59 2025 +0700
+
+    финальная версия без экспорта
+
+ main_app/__pycache__/forms.cpython-311.pyc    | Bin [31m14440[m -> [32m14563[m bytes
+ main_app/forms.py                             |  10 [32m++[m[31m--[m
+ main_app/templates/main_app/modal_create.html |   2 [32m+[m[31m-[m
+ static/js/modal_create.js                     |  64 [32m+++++++++++[m[31m---------------[m
+ 4 files changed, 33 insertions(+), 43 deletions(-)
+
+[33mcommit f84e6378cde000e5b621831d6ed15547d764ee1c[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Tue Mar 25 15:24:38 2025 +0700
+
+    Дорпботки валидации полей Пикеты, Типы съемки и Переработаная История изменений
+
+ main_app/__pycache__/forms.cpython-311.pyc  | Bin [31m14062[m -> [32m14440[m bytes
+ main_app/__pycache__/models.cpython-311.pyc | Bin [31m7222[m -> [32m10757[m bytes
+ main_app/forms.py                           |  15 [32m++++[m[31m-[m
+ main_app/models.py                          |  88 [32m+++++++++++++++++++++++++++[m[31m-[m
+ main_app/templates/main_app/modal_edit.html |  34 [32m+++++++[m[31m----[m
+ static/js/modal_edit.js                     |  81 [32m++++++++++++++++++++++[m[31m---[m
+ 6 files changed, 193 insertions(+), 25 deletions(-)
+
+[33mcommit 0d0ccae00118db7037c4e3a41eb36f85acf1648d[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Tue Mar 25 11:52:23 2025 +0700
+
+    Доработки валидации полей Тип и Название объекта, Диапазон даты съемки
+
+ static/js/modal_edit.js | 44 [32m+++++++++++++++++++++[m[31m-----------------------[m
+ 1 file changed, 21 insertions(+), 23 deletions(-)
+
+[33mcommit 8593b940179a0a7239eb25889939919bfe57a41a[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Tue Mar 25 11:45:48 2025 +0700
+
+    Доработки валидации полей окна редактирования
+
+ main_app/__pycache__/forms.cpython-311.pyc | Bin [31m14312[m -> [32m14062[m bytes
+ main_app/forms.py                          |  35 [32m+++++[m[31m------[m
+ static/js/modal_edit.js                    |  97 [32m++++++++++++++++++++++++++++[m[31m-[m
+ 3 files changed, 109 insertions(+), 23 deletions(-)
+
+[33mcommit 400b14fd642b669025d3fda9a7d88b2f803add28[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Mon Mar 24 16:45:51 2025 +0700
+
+    Переработаный множественный выбор заявок и мелкие доработки
+
+ main_app/__pycache__/models.cpython-311.pyc    | Bin [31m7222[m -> [32m7222[m bytes
+ main_app/__pycache__/urls.cpython-311.pyc      | Bin [31m1539[m -> [32m1657[m bytes
+ main_app/__pycache__/views.cpython-311.pyc     | Bin [31m17259[m -> [32m18318[m bytes
+ main_app/models.py                             |   2 [32m+[m[31m-[m
+ main_app/templates/main_app/modal_edit.html    |   5 [32m+[m[31m-[m
+ main_app/templates/main_app/requests_list.html | 115 [32m++++++++[m[31m-----[m
+ main_app/urls.py                               |   2 [32m+[m
+ main_app/views.py                              |  32 [32m+++[m[31m-[m
+ static/css/requests_list.css                   |  83 [32m++++++++[m[31m-[m
+ static/js/requests_list.js                     | 229 [32m++++++++++++++++++++++[m[31m---[m
+ 10 files changed, 380 insertions(+), 88 deletions(-)
+
+[33mcommit f87e62072a5e4e8b285c184f654da42c00d90499[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Mon Mar 24 10:52:27 2025 +0700
+
+    мнжественный выбор заявок для смены статуса доработки UX
+
+ main_app/templates/base.html                   |  2 [32m+[m[31m-[m
+ main_app/templates/main_app/requests_list.html | 48 [32m++++++++++[m[31m-------[m
+ static/css/requests_list.css                   | 44 [32m++++++++[m[31m-------[m
+ static/js/requests_list.js                     | 74 [32m+++++++++++++++[m[31m-----------[m
+ 4 files changed, 94 insertions(+), 74 deletions(-)
+
+[33mcommit dc5d59f0cafdafa84f9795be42d6cd14add09d1a[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Fri Mar 21 14:21:35 2025 +0700
+
+    мнжественный выбор заявок для смены статуса
+
+ main_app/__pycache__/urls.cpython-311.pyc      | Bin [31m1416[m -> [32m1539[m bytes
+ main_app/__pycache__/views.cpython-311.pyc     | Bin [31m15677[m -> [32m17259[m bytes
+ main_app/templates/main_app/requests_list.html |  21 [32m++[m[31m-[m
+ main_app/urls.py                               |   2 [32m+[m
+ main_app/views.py                              |  39 [32m++++++[m
+ static/css/requests_list.css                   |  16 [32m+++[m
+ static/js/requests_list.js                     | 175 [32m+++++++++++++++++++++++++[m
+ 7 files changed, 251 insertions(+), 2 deletions(-)
+
+[33mcommit 6e0314c0e5c2becd41adefb9f618b57d2a6e60b7[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Fri Mar 21 10:39:59 2025 +0700
+
+    Доработаный дизайн
+
+ main_app/__pycache__/forms.cpython-311.pyc     | Bin [31m13629[m -> [32m14312[m bytes
+ main_app/forms.py                              | 140 [32m+++++++[m[31m-----[m
+ main_app/templates/base.html                   |  27 [32m++[m[31m-[m
+ main_app/templates/main_app/modal_edit.html    |  99 [32m+++++[m[31m---[m
+ main_app/templates/main_app/requests_list.html | 184 [32m++++++++++[m[31m-----[m
+ static/css/requests_list.css                   | 304 [32m++++++++++++++++++++[m[31m-----[m
+ static/js/modal_edit.js                        |  33 [32m+[m[31m--[m
+ 7 files changed, 557 insertions(+), 230 deletions(-)
+
+[33mcommit e215a27358a16188ea2b7051e97d05b3e05ad8da[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Fri Mar 14 16:04:53 2025 +0700
+
+    готовое окно редатирования со стилем
+
+ main_app/templates/main_app/modal_create.html |   2 [32m+[m[31m-[m
+ static/css/modal_create.css                   | 145 [32m+++++++++++++++++++++++[m[31m---[m
+ 2 files changed, 130 insertions(+), 17 deletions(-)
+
+[33mcommit a6aa5df321ed6242bcd0809444cc6d17ff669cca[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Fri Mar 14 14:25:36 2025 +0700
+
+    Финальные изменения в логику отображения ошибок
+
+ main_app/__pycache__/forms.cpython-311.pyc     | Bin [31m13216[m -> [32m13629[m bytes
+ main_app/forms.py                              | 105 [32m+++++++++[m[31m------[m
+ main_app/templates/main_app/modal_create.html  | 113 [32m+++++++++++[m[31m-----[m
+ main_app/templates/main_app/requests_list.html |   2 [32m+[m[31m-[m
+ static/css/modal_create.css                    |  18 [32m+++[m
+ static/js/modal_create.js                      | 173 [32m++++++++++++++++++++++++[m[31m-[m
+ 6 files changed, 330 insertions(+), 81 deletions(-)
+
+[33mcommit aad0d9cc3a6e9da3c03fe8a9fe3b8ac68cfa45f8[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Thu Mar 13 13:11:06 2025 +0700
+
+    доработки фильтрации и сортировки
+
+ main_app/__pycache__/views.cpython-311.pyc     | Bin [31m15384[m -> [32m15677[m bytes
+ main_app/templates/main_app/requests_list.html |  18 [32m+++++[m[31m-----[m
+ main_app/views.py                              |  45 [32m++++++++++++++[m[31m-----------[m
+ static/js/requests_list.js                     |  41 [32m++++++++++++++++++[m[31m----[m
+ 4 files changed, 69 insertions(+), 35 deletions(-)
+
+[33mcommit e20a5fe258f41c14997107b276c1eb74f293cc37[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Thu Mar 13 10:09:00 2025 +0700
+
+    фильтрация и сортировка
+
+ main_app/__pycache__/views.cpython-311.pyc     | Bin [31m13216[m -> [32m15384[m bytes
+ main_app/templates/base.html                   |   7 [32m+[m
+ main_app/templates/main_app/modal_edit.html    |   2 [32m+[m[31m-[m
+ main_app/templates/main_app/requests_list.html | 201 [32m++++++++++++++++++++++[m[31m---[m
+ main_app/views.py                              |  63 [32m+++++++[m[31m-[m
+ static/js/modal_edit.js                        |  46 [32m++++[m[31m--[m
+ static/js/requests_list.js                     |  85 [32m++++++++++[m[31m-[m
+ 7 files changed, 363 insertions(+), 41 deletions(-)
+
+[33mcommit 54eb8f6610fa84cb818269261b378dc31c87034b[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Wed Mar 12 09:22:52 2025 +0700
+
+    финальное испрвалнеие валидации и добавление кнопки удаления
+
+ main_app/__pycache__/forms.cpython-311.pyc  | Bin [31m13067[m -> [32m13216[m bytes
+ main_app/__pycache__/models.cpython-311.pyc | Bin [31m7145[m -> [32m7222[m bytes
+ main_app/__pycache__/urls.cpython-311.pyc   | Bin [31m1282[m -> [32m1416[m bytes
+ main_app/__pycache__/views.cpython-311.pyc  | Bin [31m12989[m -> [32m13216[m bytes
+ main_app/forms.py                           |  75 [32m++++[m[31m-----[m
+ main_app/models.py                          |   9 [32m+[m[31m-[m
+ main_app/templates/main_app/modal_edit.html |   3 [32m+[m[31m-[m
+ main_app/urls.py                            |   2 [32m+[m
+ main_app/views.py                           |  44 [32m+++[m[31m---[m
+ static/js/modal_edit.js                     | 234 [32m++++++++++++++++++[m[31m----------[m
+ 10 files changed, 230 insertions(+), 137 deletions(-)
+
+[33mcommit f254cc830f06af4a0fd485cbed5e062cf0e14c61[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Tue Mar 11 14:08:43 2025 +0700
+
+    поправка валидации и истории
+
+ main_app/__pycache__/forms.cpython-311.pyc         | Bin [31m11069[m -> [32m13067[m bytes
+ main_app/__pycache__/views.cpython-311.pyc         | Bin [31m12114[m -> [32m12989[m bytes
+ main_app/forms.py                                  |  96 [32m++++++++++++++[m[31m-------[m
+ main_app/templates/main_app/modal_edit.html        |  19 [32m+++[m[31m-[m
+ main_app/templatetags/__init__.py                  |   0
+ .../__pycache__/__init__.cpython-311.pyc           | Bin [31m0[m -> [32m242[m bytes
+ .../__pycache__/json_extras.cpython-311.pyc        | Bin [31m0[m -> [32m718[m bytes
+ main_app/templatetags/json_extras.py               |  11 [32m+++[m
+ main_app/views.py                                  |  37 [32m++++++[m[31m--[m
+ static/css/modal_edit.css                          |   9 [32m+[m[31m-[m
+ static/js/modal_edit.js                            |  45 [32m++++++[m[31m----[m
+ 11 files changed, 154 insertions(+), 63 deletions(-)
+
+[33mcommit 0986883fc4e770f7db1af9a3debb476c5cb8e2ef[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Mon Mar 10 17:06:07 2025 +0700
+
+    валидация для окна создания заявки
+
+ static/js/modal_create.js | 31 [32m+++++++++++++++++++++++++[m[31m------[m
+ 1 file changed, 25 insertions(+), 6 deletions(-)
+
+[33mcommit c78cda0de3d7c5504c31b9066df94a17f5497796[m
+Author: xud-300 <ivanhudasov09361@gmail.com>
+Date:   Mon Mar 10 16:40:04 2025 +0700
+
+    валидация для окна редактирования
+
+ main_app/__pycache__/forms.cpython-311.pyc  | Bin [31m5838[m -> [32m11069[m bytes
+ main_app/__pycache__/views.cpython-311.pyc  | Bin [31m11860[m -> [32m12114[m bytes
+ main_app/forms.py                           | 138 [32m+++++++++++++++++++++++++[m[31m---[m
+ main_app/templates/main_app/modal_edit.html |   6 [32m+[m[31m-[m
+ main_app/views.py                           |   6 [32m+[m[31m-[m
+ static/css/modal_edit.
