@@ -29,6 +29,10 @@
                 <a href="#" id="orthoDownloadLink">
                   Архив: <span id="orthoArchiveName">название_архива.zip</span>
                 </a>
+                {% if user.is_staff %}
+                <!-- Контейнер для иконки удаления файла -->
+                <span class="deleteFile-container" id="orthoDeleteIconContainer"></span>
+                {% endif %}
               </p>
               {% if user.is_staff %}
               <!-- Кнопка для загрузки результатов -->
@@ -72,9 +76,17 @@
                 <a href="#" id="laserDownloadLink">
                   Архив: <span id="laserArchiveName">название_архива.zip</span>
                 </a>
+                {% if user.is_staff %}
+                <!-- Контейнер для иконки удаления файла для лазера -->
+                <span class="deleteFile-container" id="laserDeleteIconContainer"></span>
+                {% endif %}
               </p>
               <p>
                 <a href="#" id="laserViewLink">Просмотр результата</a>
+                {% if user.is_staff %}
+                <!-- Контейнер для иконки удаления ссылки просмотра результата лазера -->
+                <span class="deleteFile-container" id="laserViewDeleteIconContainer"></span>
+                {% endif %}
               </p>
               {% if user.is_staff %}
               <!-- Кнопка для открытия секции загрузки -->
@@ -125,6 +137,10 @@
               <!-- Ссылка для просмотра -->
               <p>
                 <a href="#" id="panoramaViewLink">Ссылка на результат отсутствует</a>
+                {% if user.is_staff %}
+                <!-- Контейнер для иконки удаления ссылки панели -->
+                <span class="deleteFile-container" id="panoramaDeleteIconContainer"></span>
+                {% endif %}
               </p>
 
               {% if user.is_staff %}
@@ -165,7 +181,7 @@
               <!-- Секция загрузки (для администраторов) -->
               <div id="overviewUpload" class="upload-section" style="display: none;">
                 <h6 class="mb-3">Загрузить результаты для Обзорных фото</h6>
-                <form id="overviewUploadForm" data-request-id="{{ flight_request.id }}">
+                <form id="overviewUploadForm" data-request-id="{{ flight_request.id }}" enctype="multipart/form-data">
                   <!-- Область Drag-and-Drop -->
                   <div id="overviewDropZoneContainer">
                     <div class="drop-zone" id="overviewDropZone">

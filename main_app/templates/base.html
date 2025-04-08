@@ -107,7 +107,7 @@
     </style>
     {% endblock %}
 </head>
-<body>
+<body data-user-role="{% if user.is_staff %}admin{% else %}user{% endif %}">
     <div class="wrapper">
         <header class="bg-orange text-white py-3 position-relative">
             <div class="container-fluid header-container">

@@ -473,8 +473,10 @@ class UploadResultView(View):
                 )
                 temp_id = temp_result.id
             elif upload_type == 'overview':
-                # Здесь имя поля должно быть "overviewFiles"
+                # Получаем список файлов из поля overviewFiles
                 files = request.FILES.getlist('overviewFiles')
+                if not files:
+                    return JsonResponse({'success': False, 'error': 'Не выбраны файлы для загрузки.'}, status=400)
                 created_ids = []
                 for f in files:
                     temp_obj = TempResultFile.objects.create(
@@ -484,7 +486,9 @@ class UploadResultView(View):
                         file_size=f.size
                     )
                     created_ids.append(temp_obj.id)
-                temp_id = created_ids
+                # Возвращаем список идентификаторов как строку JSON
+                import json
+                temp_id = json.dumps(created_ids)
 
             return JsonResponse({
                 'success': True,
@@ -547,7 +551,7 @@ class UploadTempFileView(View):
             elif upload_type == 'laser':
                 # Используем ключ "laserFile" вместо "file"
                 temp_file = form.cleaned_data['laserFile']
-                view_link = form.cleaned_data.get('view_link')
+                view_link = form.cleaned_data.get('laserViewInput') or ''
                 temp_result = TempResultFile.objects.create(
                     uploaded_by=request.user,
                     result_type=upload_type,
@@ -566,8 +570,10 @@ class UploadTempFileView(View):
                 )
                 temp_id = temp_result.id
             elif upload_type == 'overview':
-                # Здесь имя поля должно быть "overviewFiles"
+                # Получаем список файлов из поля overviewFiles
                 files = request.FILES.getlist('overviewFiles')
+                if not files:
+                    return JsonResponse({'success': False, 'error': 'Не выбраны файлы для загрузки.'}, status=400)
                 created_ids = []
                 for f in files:
                     temp_obj = TempResultFile.objects.create(
@@ -577,7 +583,9 @@ class UploadTempFileView(View):
                         file_size=f.size
                     )
                     created_ids.append(temp_obj.id)
-                temp_id = created_ids
+                # Возвращаем список идентификаторов как строку JSON
+                import json
+                temp_id = json.dumps(created_ids)
 
             return JsonResponse({
                 'success': True,
@@ -592,57 +600,92 @@ class UploadTempFileView(View):
 @method_decorator(login_required, name='dispatch')
 class ConfirmTempFileView(View):
     """
-    Принимает temp_id, request_id и view_link.
+    Принимает temp_id (для одиночных файлов) или temp_ids (для множественной загрузки Overview файлов)
+    вместе с request_id и view_link.
     Переносит файл(ы) из TempResultFile -> FlightResultFile.
-    Удаляет запись(и) из TempResultFile.
+    Удаляет TempResultFile.
     """
     def post(self, request, *args, **kwargs):
         if not request.user.is_staff:
             return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
 
-        temp_id = request.POST.get('temp_id')
         request_id = request.POST.get('request_id')
-        view_link = request.POST.get('view_link', '')  # Получаем view_link, если передано, иначе пустая строка
-
-        if not temp_id or not request_id:
-            return HttpResponseBadRequest("temp_id и request_id обязательны.")
+        if not request_id:
+            return HttpResponseBadRequest("request_id обязательны.")
 
         try:
             flight = FlightRequest.objects.get(pk=request_id)
         except FlightRequest.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
 
+        # Обработка множественной загрузки (overview)
+        temp_ids_json = request.POST.get('temp_ids')
+        if temp_ids_json:
+            import json
+            try:
+                temp_ids = json.loads(temp_ids_json)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'error': 'Неверный формат temp_ids'}, status=400)
+
+            # Считываем view_link из POST. Если оно не пустое, то будем использовать его,
+            # иначе оставляем то, что было в TempResultFile
+            view_link = request.POST.get('view_link', '')
+            for tid in temp_ids:
+                try:
+                    temp_file = TempResultFile.objects.get(pk=tid, uploaded_by=request.user)
+                except TempResultFile.DoesNotExist:
+                    continue  # Можно добавить дополнительную обработку ошибки
+                final_obj = FlightResultFile(
+                    flight_request=flight,
+                    result_type=temp_file.result_type,
+                    view_link = view_link if view_link.strip() != '' else temp_file.view_link,
+                    file_size=temp_file.file_size
+                )
+                if temp_file.file:
+                    import os
+                    filename = os.path.basename(temp_file.file.name)
+                    with temp_file.file.open('rb') as f:
+                        final_obj.file.save(filename, f, save=False)
+                final_obj.save()
+                if temp_file.file:
+                    temp_file.file.delete(save=False)
+                temp_file.delete()
+            return JsonResponse({'success': True, 'message': 'Файлы подтверждены и перемещены'})
+
+        # Обработка одиночного файла (ortho, laser, panorama)
+        temp_id = request.POST.get('temp_id')
+        if not temp_id:
+            return HttpResponseBadRequest("temp_id обязательны.")
         try:
             temp_file = TempResultFile.objects.get(pk=temp_id, uploaded_by=request.user)
         except TempResultFile.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Temp file не найден'}, status=404)
 
-        # Обновляем поле view_link в temp_file, если новое значение передано
-        temp_file.view_link = view_link
-        temp_file.save()
+        # Считываем актуальное значение ссылки из POST.
+        # Если пользователь изменил ссылку после загрузки файла во временное хранилище,
+        # то значение view_link_param будет непустым и мы его используем.
+        view_link_param = request.POST.get('view_link', '')
+        final_view_link = view_link_param if view_link_param.strip() != '' else temp_file.view_link
 
-        # Создаем объект FlightResultFile, копируя значение view_link из temp_file
         final_obj = FlightResultFile(
             flight_request=flight,
             result_type=temp_file.result_type,
-            view_link=temp_file.view_link,
+            view_link = final_view_link,
             file_size=temp_file.file_size
         )
-
         if temp_file.file:
             import os
             filename = os.path.basename(temp_file.file.name)
             with temp_file.file.open('rb') as f:
                 final_obj.file.save(filename, f, save=False)
-
         final_obj.save()
-
-        # Удаляем temp_file и его физический файл из временного хранилища
         if temp_file.file:
             temp_file.file.delete(save=False)
         temp_file.delete()
 
         return JsonResponse({'success': True, 'message': 'Файл подтверждён и перемещён'})
+
+
 
 
 
@@ -669,3 +712,34 @@ class CancelTempFileView(View):
         except TempResultFile.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Temp file не найден'}, status=404)
 
+@method_decorator(login_required, name='dispatch')
+class DeleteResultFileView(View):
+    """
+    Представление для удаления подтверждённого файла (или ссылки)
+    из постоянного хранилища.
+    """
+
+    def post(self, request, file_id, *args, **kwargs):
+        if not request.user.is_staff:
+            return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
+
+        element_type = request.POST.get('element_type', 'full')
+        
+        try:
+            file_obj = FlightResultFile.objects.get(pk=file_id)
+        except FlightResultFile.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Файл не найден'}, status=404)
+        
+        # Если удаляем только ссылку для просмотра лазера
+        if element_type == "laser_view":
+            # Обновляем объект: очищаем поле view_link, оставляя файл нетронутым
+            file_obj.view_link = ""
+            file_obj.save()
+            return JsonResponse({'success': True, 'message': 'Ссылка удалена'})
+        # Если элемент имеет тип "panorama_view" можно аналогично обработать
+        # Для остальных случаев (например, "laser", "ortho", "panorama") удаляем полностью:
+        else:
+            if file_obj.file:
+                file_obj.file.delete(save=False)
+            file_obj.delete()
+            return JsonResponse({'success': True, 'message': 'Элемент удалён'})

@@ -283,83 +283,42 @@ const validationRules = {
         alert("Дождитесь завершения загрузки файла.");
         return;
       }
-      
-      // Для типа "laser" в этот момент считываем значение из поля ссылки
-      if (type === 'laser') {
-        var linkInput = document.getElementById('laserViewInput');
-        var customViewLink = linkInput ? linkInput.value : '';
-        confirmTempFile(tempId, requestId, customViewLink)
-          .then(function(data) {
-            console.log("Ответ от confirmTempFile:", data);
-            alert("Файл и ссылка успешно сохранены.");
-            form.reset();
-            delete form.dataset.tempId;
-            
-            var progressContainer = form.querySelector('.upload-progress');
-            var progressBar = form.querySelector('.upload-progress-bar');
-            var progressText = form.querySelector('.upload-progress-text');
-            var actionContainer = form.querySelector('.upload-actions');
+      // Передаём параметры в confirmTempFile для одиночной загрузки
+      confirmTempFile(tempId, requestId)
+        .then(function(data) {
+          console.log("Ответ от confirmTempFile:", data);
+          alert("Файл успешно сохранён.");
+          form.reset();
+          delete form.dataset.tempId;
+          
+          var progressContainer = form.querySelector('.upload-progress');
+          var progressBar = form.querySelector('.upload-progress-bar');
+          var progressText = form.querySelector('.upload-progress-text');
+          var actionContainer = form.querySelector('.upload-actions');
 
-            if (progressContainer) {
-              progressContainer.style.display = 'none';
-            }
-            if (progressBar) {
-              progressBar.style.width = '0%';
-            }
-            if (progressText) {
-              progressText.textContent = '';
-            }
-            if (actionContainer) {
-              actionContainer.classList.add('d-none');
-            }
+          if (progressContainer) {
+            progressContainer.style.display = 'none';
+          }
+          if (progressBar) {
+            progressBar.style.width = '0%';
+          }
+          if (progressText) {
+            progressText.textContent = '';
+          }
+          if (actionContainer) {
+            actionContainer.classList.add('d-none');
+          }
 
-            console.log("Перезагружаем данные результата для requestId:", requestId);
-            loadResultData(requestId);
-          })
-          .catch(function(error) {
-            console.error("Ошибка при подтверждении файла:", error);
-            alert("Ошибка при подтверждении файла: " + error.message);
-          });
-      } else {
-        // Для остальных типов (например, "ortho") вызываем confirmTempFile без передачи ссылки,
-        // и там значение берётся из поля, если есть.
-        confirmTempFile(tempId, requestId)
-          .then(function(data) {
-            console.log("Ответ от confirmTempFile:", data);
-            alert("Файл успешно сохранён.");
-            form.reset();
-            delete form.dataset.tempId;
-            
-            var progressContainer = form.querySelector('.upload-progress');
-            var progressBar = form.querySelector('.upload-progress-bar');
-            var progressText = form.querySelector('.upload-progress-text');
-            var actionContainer = form.querySelector('.upload-actions');
-
-            if (progressContainer) {
-              progressContainer.style.display = 'none';
-            }
-            if (progressBar) {
-              progressBar.style.width = '0%';
-            }
-            if (progressText) {
-              progressText.textContent = '';
-            }
-            if (actionContainer) {
-              actionContainer.classList.add('d-none');
-            }
-
-            console.log("Перезагружаем данные результата для requestId:", requestId);
-            loadResultData(requestId);
-          })
-          .catch(function(error) {
-            console.error("Ошибка при подтверждении файла:", error);
-            alert("Ошибка при подтверждении файла: " + error.message);
-          });
-      }
+          console.log("Перезагружаем данные результата для requestId:", requestId);
+          loadResultData(requestId);
+        })
+        .catch(function(error) {
+          console.error("Ошибка при подтверждении файла:", error);
+          alert("Ошибка при подтверждении файла: " + error.message);
+        });
     });
   }
 });
-
 
 function uploadOverviewFiles(form, uploadType, requestId) {
   var url = '/main_app/requests/upload_temp_file/';
@@ -480,14 +439,21 @@ function uploadPanorama(form, uploadType, requestId) {
 }
 
 // Функция для подтверждения сохранения временного файла с поддержкой передачи кастомного view_link
-function confirmTempFile(tempId, requestId) {
+function confirmTempFile(tempId, requestId, customViewLink) {
   const url = '/main_app/requests/confirm_temp_file/';
   const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-  // Считываем текущее значение из поля для ссылки лазерного сканирования
-  const linkInput = document.getElementById('laserViewInput');
-  const viewLink = linkInput ? (linkInput.value || '') : '';
-
+  // Если customViewLink передан, используем его; иначе, для лазера ищем поле "laserViewInput"
+  let viewLink = '';
+  if (customViewLink !== undefined) {
+    viewLink = customViewLink;
+  } else {
+    const linkInput = document.getElementById('laserViewInput');
+    if (linkInput) {
+      viewLink = linkInput.value || '';
+    }
+  }
+  
   console.log("Отправляем запрос по URL:", url);
   console.log("Параметры запроса: temp_id =", tempId, ", request_id =", requestId, ", view_link =", viewLink);
 
@@ -682,317 +648,115 @@ $('#resultModal').on('hidden.bs.modal', function () {
 });
 
 
-
-
-
-/*************************************************************
- * Функция userIsAdmin
- * Определяет, является ли текущий пользователь администратором.
- * Для проверки используется data-атрибут <body data-user-role="admin">.
- *************************************************************/
-function userIsAdmin() {
-  return document.body.getAttribute('data-user-role') === 'admin';
-}
-
-/*************************************************************
- * 8. Функция populateResultModal — заполнение модального окна результатами
- *************************************************************/
-function populateResultModal(data) {
-  try {
-    // --- Ортофотоплан ---
-    var orthoSection = document.getElementById('orthoSection');
-    if (orthoSection) {
-      if (data.orthophoto) {
-        orthoSection.style.display = 'block';
-        var orthoLink = document.getElementById('orthoDownloadLink');
-        // Проверяем наличие download_link
-        if (data.orthophoto.download_link && data.orthophoto.download_link !== '#' && data.orthophoto.download_link !== '') {
-          orthoLink.setAttribute('href', data.orthophoto.download_link);
-          orthoLink.innerHTML = 'Архив: <span id="orthoArchiveName">' + (data.orthophoto.archive_name || 'Файл загружен') + '</span>';
-          // Если пользователь админ и есть id файла — вставляем крестик
-          if (userIsAdmin() && data.orthophoto.id) {
-            var orthoDeleteContainer = document.getElementById('orthoDeleteIconContainer');
-            if (orthoDeleteContainer) {
-              orthoDeleteContainer.innerHTML = 
-                '<span class="deleteFile" data-type="ortho" data-file-id="' + data.orthophoto.id + '" title="Удалить">&times;</span>';
-            }
+  /*************************************************************
+   * 8. Функция populateResultModal — заполнение модального окна результатами
+   *************************************************************/
+  function populateResultModal(data) {
+    try {
+      // --- Ортофотоплан ---
+      var orthoSection = document.getElementById('orthoSection');
+      if (orthoSection) {
+        if (data.orthophoto) {
+          orthoSection.style.display = 'block';
+          var orthoLink = document.getElementById('orthoDownloadLink');
+          if (data.orthophoto.download_link && data.orthophoto.download_link !== '#' && data.orthophoto.download_link !== '') {
+            orthoLink.setAttribute('href', data.orthophoto.download_link);
+            // Полностью перерисовываем содержимое ссылки с вложенным span
+            orthoLink.innerHTML = 'Архив: <span id="orthoArchiveName">' + (data.orthophoto.archive_name || 'Файл загружен') + '</span>';
           } else {
-            // Очищаем контейнер, если файл есть, но пользователь не админ
-            var orthoDeleteContainer = document.getElementById('orthoDeleteIconContainer');
-            if (orthoDeleteContainer) {
-              orthoDeleteContainer.innerHTML = '';
+            orthoLink.removeAttribute('href');
+            orthoLink.textContent = 'Файлы для скачивания ещё не добавлены';
+          }
+        } else {
+          orthoSection.style.display = 'none';
+        }
+      }
+      
+      // --- Лазерное сканирование ---
+      var laserSection = document.getElementById('laserSection');
+      if (laserSection) {
+        if (data.laser) {
+          laserSection.style.display = 'block';
+          var laserDownloadLink = document.getElementById('laserDownloadLink');
+          if (data.laser.download_link && data.laser.download_link !== '#' && data.laser.download_link !== '') {
+            laserDownloadLink.setAttribute('href', data.laser.download_link);
+            // Обновляем содержимое ссылки с вложенным span для имени файла
+            laserDownloadLink.innerHTML = 'Архив: <span id="laserArchiveName">' + (data.laser.archive_name || 'Файл загружен') + '</span>';
+          } else {
+            laserDownloadLink.removeAttribute('href');
+            laserDownloadLink.textContent = 'Файлы для скачивания ещё не добавлены';
+          }
+          var laserViewLink = document.getElementById('laserViewLink');
+          if (laserViewLink) {
+            if (data.laser.view_link && data.laser.view_link !== '#' && data.laser.view_link !== '') {
+              laserViewLink.setAttribute('href', data.laser.view_link);
+              // Можно, если нужно, задать содержимое ссылки для просмотра
+              laserViewLink.innerHTML = 'Просмотр результата';
+            } else {
+              laserViewLink.removeAttribute('href');
+              laserViewLink.textContent = 'Ссылка на результат отсутствует';
             }
           }
         } else {
-          // download_link пустой — файл не загружен
-          orthoLink.removeAttribute('href');
-          orthoLink.textContent = 'Файлы для скачивания ещё не добавлены';
-          // Скрываем или очищаем иконку удаления
-          var orthoDeleteContainer = document.getElementById('orthoDeleteIconContainer');
-          if (orthoDeleteContainer) {
-            orthoDeleteContainer.innerHTML = '';
-          }
+          laserSection.style.display = 'none';
         }
-      } else {
-        // Нет данных по ортофотоплану — скрываем секцию
-        orthoSection.style.display = 'none';
       }
-    }
-    
-    // --- Лазерное сканирование ---
-    var laserSection = document.getElementById('laserSection');
-    if (laserSection) {
-      if (data.laser) {
-        laserSection.style.display = 'block';
-        
-        // 1. Архив (файл)
-        var laserDownloadLink = document.getElementById('laserDownloadLink');
-        if (laserDownloadLink) {
-          if (data.laser.download_link && data.laser.download_link !== '#' && data.laser.download_link !== '') {
-            // Есть ссылка на скачивание архива
-            laserDownloadLink.setAttribute('href', data.laser.download_link);
-            laserDownloadLink.innerHTML = 'Архив: <span id="laserArchiveName">' + (data.laser.archive_name || 'Файл загружен') + '</span>';
-            
-            // Если пользователь админ и есть ID файла, добавляем крестик
-            if (userIsAdmin() && data.laser.id) {
-              var laserDeleteContainer = document.getElementById('laserDeleteIconContainer');
-              if (laserDeleteContainer) {
-                laserDeleteContainer.innerHTML =
-                  '<span class="deleteFile" data-type="laser" data-file-id="' + data.laser.id + '" title="Удалить архив">&times;</span>';
-              }
+      
+      // --- Панорама ---
+      var panoramaSection = document.getElementById('panoramaSection');
+      if (panoramaSection) {
+        if (data.panorama) {
+          panoramaSection.style.display = 'block';
+          var panoramaViewLink = document.getElementById('panoramaViewLink');
+          if (panoramaViewLink) {
+            if (data.panorama.view_link && data.panorama.view_link !== '#' && data.panorama.view_link !== '') {
+              panoramaViewLink.setAttribute('href', data.panorama.view_link);
+              // Задаём содержимое ссылки для просмотра панорамы
+              panoramaViewLink.innerHTML = 'Перейти к просмотру панорамы';
             } else {
-              // Не админ или нет ID — очищаем контейнер
-              var laserDeleteContainer = document.getElementById('laserDeleteIconContainer');
-              if (laserDeleteContainer) {
-                laserDeleteContainer.innerHTML = '';
-              }
-            }
-          } else {
-            // Архив отсутствует
-            laserDownloadLink.removeAttribute('href');
-            laserDownloadLink.textContent = 'Файлы для скачивания ещё не добавлены';
-            var laserDeleteContainer = document.getElementById('laserDeleteIconContainer');
-            if (laserDeleteContainer) {
-              laserDeleteContainer.innerHTML = '';
+              panoramaViewLink.removeAttribute('href');
+              panoramaViewLink.textContent = 'Ссылка на результат отсутствует';
             }
           }
+        } else {
+          panoramaSection.style.display = 'none';
         }
-        
-        // 2. Ссылка на просмотр (view_link)
-        var laserViewLink = document.getElementById('laserViewLink');
-        if (laserViewLink) {
-          if (data.laser.view_link && data.laser.view_link !== '#' && data.laser.view_link !== '') {
-            laserViewLink.setAttribute('href', data.laser.view_link);
-            laserViewLink.innerHTML = 'Просмотр результата';
-            
-            // Если пользователь админ и есть ID, вставляем крестик для ссылки
-            if (userIsAdmin() && data.laser.id) {
-              var laserViewDeleteContainer = document.getElementById('laserViewDeleteIconContainer');
-              if (laserViewDeleteContainer) {
-                laserViewDeleteContainer.innerHTML =
-                  '<span class="deleteFile" data-type="laser_view" data-file-id="' + data.laser.id + '" title="Удалить ссылку">&times;</span>';
-              }
-            } else {
-              var laserViewDeleteContainer = document.getElementById('laserViewDeleteIconContainer');
-              if (laserViewDeleteContainer) {
-                laserViewDeleteContainer.innerHTML = '';
-              }
-            }
-          } else {
-            // Ссылки нет
-            laserViewLink.removeAttribute('href');
-            laserViewLink.textContent = 'Ссылка на результат отсутствует';
-            var laserViewDeleteContainer = document.getElementById('laserViewDeleteIconContainer');
-            if (laserViewDeleteContainer) {
-              laserViewDeleteContainer.innerHTML = '';
-            }
-          }
-        }
-        
-      } else {
-        // Данных по лазеру нет — скрываем секцию
-        laserSection.style.display = 'none';
       }
-    }
-
-    
-    // --- Панорама ---
-    var panoramaSection = document.getElementById('panoramaSection');
-    if (panoramaSection) {
-      if (data.panorama) {
-        panoramaSection.style.display = 'block';
-        var panoramaViewLink = document.getElementById('panoramaViewLink');
-        if (panoramaViewLink) {
-          if (data.panorama.view_link && data.panorama.view_link !== '#' && data.panorama.view_link !== '') {
-            panoramaViewLink.setAttribute('href', data.panorama.view_link);
-            panoramaViewLink.innerHTML = 'Перейти к просмотру панорамы';
-            // Если нужен крестик для ссылки панорамы, делаем по аналогии
-            if (userIsAdmin() && data.panorama.id) {
-              var panoramaDeleteContainer = document.getElementById('panoramaDeleteIconContainer');
-              if (panoramaDeleteContainer) {
-                panoramaDeleteContainer.innerHTML = 
-                  '<span class="deleteFile" data-type="panorama" data-file-id="' + data.panorama.id + '" title="Удалить">&times;</span>';
-              }
-            }
-          } else {
-            panoramaViewLink.removeAttribute('href');
-            panoramaViewLink.textContent = 'Ссылка на результат отсутствует';
-            var panoramaDeleteContainer = document.getElementById('panoramaDeleteIconContainer');
-            if (panoramaDeleteContainer) {
-              panoramaDeleteContainer.innerHTML = '';
-            }
-          }
-        }
-      } else {
-        panoramaSection.style.display = 'none';
-      }
-    }
-    
-    // --- Обзорные фото ---
-    // Пока не изменяем, так как планируется отдельная переработка
-    var overviewSection = document.getElementById('overviewSection');
-    if (overviewSection) {
-      if (data.overview) {
-        overviewSection.style.display = 'block';
-        var overviewDownloadLink = document.getElementById('overviewDownloadLink');
-        if (overviewDownloadLink) {
+      
+      // --- Обзорные фото ---
+      var overviewSection = document.getElementById('overviewSection');
+      if (overviewSection) {
+        if (data.overview) {
+          overviewSection.style.display = 'block';
+          var overviewDownloadLink = document.getElementById('overviewDownloadLink');
           if (data.overview.download_link && data.overview.download_link !== '#' && data.overview.download_link !== '') {
             overviewDownloadLink.setAttribute('href', data.overview.download_link);
+            // Полностью перерисовываем содержимое ссылки
             overviewDownloadLink.innerHTML = 'Архив: <span id="overviewArchiveName">' + (data.overview.archive_name || 'Файл загружен') + '</span>';
           } else {
             overviewDownloadLink.removeAttribute('href');
             overviewDownloadLink.textContent = 'Файлы для скачивания ещё не добавлены';
           }
-        }
-        var overviewViewLink = document.getElementById('overviewViewLink');
-        if (overviewViewLink) {
-          if (data.overview.view_link && data.overview.view_link !== '#' && data.overview.view_link !== '') {
-            overviewViewLink.setAttribute('href', data.overview.view_link);
-            overviewViewLink.innerHTML = 'Просмотр фото';
-          } else {
-            overviewViewLink.removeAttribute('href');
-            overviewViewLink.textContent = 'Фото отсутствуют';
+          var overviewViewLink = document.getElementById('overviewViewLink');
+          if (overviewViewLink) {
+            if (data.overview.view_link && data.overview.view_link !== '#' && data.overview.view_link !== '') {
+              overviewViewLink.setAttribute('href', data.overview.view_link);
+              overviewViewLink.innerHTML = 'Просмотр фото';
+            } else {
+              overviewViewLink.removeAttribute('href');
+              overviewViewLink.textContent = 'Фото отсутствуют';
+            }
           }
+        } else {
+          overviewSection.style.display = 'none';
         }
-      } else {
-        overviewSection.style.display = 'none';
       }
-    }
-    
-  } catch (error) {
-    console.error("Ошибка в populateResultModal:", error);
-  }
-}
-
-
-/*************************************************************
- * 9. Функция удаления результатов съемки
- *************************************************************/
-//При клике происходит подтверждение действия, и вызывается функция deleteFile().
-document.addEventListener("click", function(event) {
-  if (event.target.classList.contains("deleteFile")) {
-    // Читаем data-атрибуты: fileId и тип элемента
-    var fileId = event.target.getAttribute("data-file-id");
-    var type = event.target.getAttribute("data-type"); // например, "ortho", "laser", "laser_view", "panorama"
-    // Запрашиваем подтверждение у пользователя
-    if (confirm("Вы действительно хотите удалить этот элемент?")) {
-      deleteFile(fileId, type);
+    } catch (error) {
+      console.error("Ошибка в populateResultModal:", error);
     }
   }
-});
-
-//Отправляет AJAX-запрос на сервер для удаления файла/ссылки по fileId
-function deleteFile(fileId, type) {
-  var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-  var url = '/main_app/requests/delete_result_file/' + fileId + '/';
   
-  // Формируем данные для отправки, включая элемент, который хотим удалить.
-  var data = new URLSearchParams();
-  data.append('element_type', type);
   
-  fetch(url, {
-      method: 'POST',
-      headers: {
-          'X-CSRFToken': csrfToken,
-          'X-Requested-With': 'XMLHttpRequest',
-          'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: data.toString()
-  })
-  .then(function(response) {
-      if (!response.ok) {
-          throw new Error("Ошибка удаления элемента. Код: " + response.status);
-      }
-      return response.json();
-  })
-  .then(function(data) {
-      if (data.success) {
-          alert(data.message);
-          // Обновляем DOM для нужной секции
-          updateSectionAfterDeletion(type);
-      } else {
-          alert("Ошибка: " + data.error);
-      }
-  })
-  .catch(function(error) {
-      alert("Ошибка при удалении: " + error.message);
-  });
-}
-
-//Обновляет внешний вид (DOM) для нужной секции после удаления элемента, сбрасывая содержимое ссылки и очищая контейнер для крестика.
-function updateSectionAfterDeletion(type) {
-  if (type === "ortho") {
-    // Обновляем секцию Ортофотоплана: сбрасываем ссылку на файл,
-    // активируем секцию загрузки для повторной загрузки и очищаем контейнер с крестиком.
-    var orthoLink = document.getElementById("orthoDownloadLink");
-    if (orthoLink) {
-      orthoLink.removeAttribute("href");
-      orthoLink.textContent = "Файлы для скачивания ещё не добавлены";
-    }
-    var orthoUpload = document.getElementById("orthoUpload");
-    if (orthoUpload) {
-      orthoUpload.style.display = "block";
-    }
-    var deleteIconContainer = document.getElementById("orthoDeleteIconContainer");
-    if (deleteIconContainer) {
-      deleteIconContainer.innerHTML = "";
-    }
-  } else if (type === "laser") {
-    // Полное удаление архива лазера:
-    // Сбрасываем ссылку для скачивания архива и очищаем контейнер для удаления.
-    var laserLink = document.getElementById("laserDownloadLink");
-    if (laserLink) {
-      laserLink.removeAttribute("href");
-      laserLink.textContent = "Файлы для скачивания ещё не добавлены";
-    }
-    var deleteIconContainer = document.getElementById("laserDeleteIconContainer");
-    if (deleteIconContainer) {
-      deleteIconContainer.innerHTML = "";
-    }
-  } else if (type === "laser_view") {
-    // Удаление только ссылки просмотра лазера:
-    // Сбрасываем href у ссылки просмотра и изменяем её текст,
-    // а также очищаем контейнер для крестика удаления ссылки.
-    var laserViewLink = document.getElementById("laserViewLink");
-    if (laserViewLink) {
-      laserViewLink.removeAttribute("href");
-      laserViewLink.textContent = "Ссылка на результат отсутствует";
-    }
-    var laserViewDeleteContainer = document.getElementById("laserViewDeleteIconContainer");
-    if (laserViewDeleteContainer) {
-      laserViewDeleteContainer.innerHTML = "";
-    }
-  } else if (type === "panorama") {
-    // Сброс секции Панорамы:
-    // Убираем атрибут href у ссылки и изменяем текст, а затем очищаем контейнер с крестиком.
-    var panoramaViewLink = document.getElementById("panoramaViewLink");
-    if (panoramaViewLink) {
-      panoramaViewLink.removeAttribute("href");
-      panoramaViewLink.textContent = "Ссылка на результат отсутствует";
-    }
-    var panoramaDeleteContainer = document.getElementById("panoramaDeleteIconContainer");
-    if (panoramaDeleteContainer) {
-      panoramaDeleteContainer.innerHTML = "";
-    }
-  }
-}
+  
+  
+  

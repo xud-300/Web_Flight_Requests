@@ -16,6 +16,7 @@ from .views import (
     UploadTempFileView,
     ConfirmTempFileView,
     CancelTempFileView,
+    DeleteResultFileView,
 )
 
 urlpatterns = [
@@ -33,4 +34,5 @@ urlpatterns = [
     path('requests/upload_temp_file/', UploadTempFileView.as_view(), name='upload_temp_file'),
     path('requests/confirm_temp_file/', ConfirmTempFileView.as_view(), name='confirm_temp_file'),
     path('requests/cancel_temp_file/', CancelTempFileView.as_view(), name='cancel_temp_file'),
+    path('requests/delete_result_file/<int:file_id>/', DeleteResultFileView.as_view(), name='delete_result_file'),
 ]
