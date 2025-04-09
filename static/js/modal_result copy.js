@@ -128,30 +128,7 @@ const validationRules = {
   }
   
   
-
-//Обработчик поля ввода для ссылки лазерного сканирования.
-document.addEventListener("DOMContentLoaded", function() {
-  var laserLinkInput = document.getElementById('laserViewInput');
-  if (laserLinkInput) {
-    laserLinkInput.addEventListener('input', function() {
-      var form = this.closest('form');
-      if (form) {
-        var actionContainer = form.querySelector('.upload-actions');
-        if (actionContainer) {
-          actionContainer.style.display = 'flex';
-          actionContainer.classList.remove('d-none');
-          var saveBtn = actionContainer.querySelector('button[type="submit"]');
-          if (saveBtn) {
-            saveBtn.disabled = false;
-          }
-        }
-      }
-    });
-  }
-});
-
-
-
+  
   /*************************************************************
    * 3. Функция uploadTempFileWithProgress — загрузка файла во временное хранилище с прогресс-баром
    *************************************************************/
@@ -276,8 +253,7 @@ document.addEventListener("DOMContentLoaded", function() {
   if (form) {
     form.addEventListener('submit', function(event) {
       event.preventDefault();
-      
-      // Получаем идентификатор заявки из data-request-id формы
+      // Читаем requestId из data-request-id формы
       var requestId = form.getAttribute('data-request-id');
       
       // Если это панорама, обрабатываем отдельно
@@ -294,17 +270,18 @@ document.addEventListener("DOMContentLoaded", function() {
       
       // Для остальных типов читаем временный id файла из data-атрибута формы
       var tempId = form.dataset.tempId;
+      
       console.log("Форма для типа:", type);
       console.log("Получен requestId:", requestId);
       console.log("Получен tempId:", tempId);
-      
+
       if (!tempId) {
         alert("Дождитесь завершения загрузки файла.");
         return;
       }
       
+      // Для типа "laser" в этот момент считываем значение из поля ссылки
       if (type === 'laser') {
-        // Для типа "laser" считываем актуальное значение ссылки из поля ввода
         var linkInput = document.getElementById('laserViewInput');
         var customViewLink = linkInput ? linkInput.value : '';
         confirmTempFile(tempId, requestId, customViewLink)
@@ -314,37 +291,34 @@ document.addEventListener("DOMContentLoaded", function() {
             form.reset();
             delete form.dataset.tempId;
             
-            // Сброс элементов прогресса и скрытие контейнера кнопок
             var progressContainer = form.querySelector('.upload-progress');
             var progressBar = form.querySelector('.upload-progress-bar');
             var progressText = form.querySelector('.upload-progress-text');
             var actionContainer = form.querySelector('.upload-actions');
-            if (progressContainer) { progressContainer.style.display = 'none'; }
-            if (progressBar) { progressBar.style.width = '0%'; }
-            if (progressText) { progressText.textContent = ''; }
+
+            if (progressContainer) {
+              progressContainer.style.display = 'none';
+            }
+            if (progressBar) {
+              progressBar.style.width = '0%';
+            }
+            if (progressText) {
+              progressText.textContent = '';
+            }
             if (actionContainer) {
               actionContainer.classList.add('d-none');
-              actionContainer.style.setProperty('display', 'none', 'important');
             }
-  
-            // Сброс текста в Drop Zone (например, "Файл выбран: ..." → стандартное сообщение)
-            var dropZone = form.querySelector('.drop-zone');
-            if (dropZone) {
-              updateDropZonePrompt(dropZone, null);
-            }
-  
+
             console.log("Перезагружаем данные результата для requestId:", requestId);
             loadResultData(requestId);
-  
-            // Опционально: можно заблокировать поле ввода, если требуется
-            // if (linkInput) { linkInput.disabled = true; }
           })
           .catch(function(error) {
             console.error("Ошибка при подтверждении файла:", error);
             alert("Ошибка при подтверждении файла: " + error.message);
           });
       } else {
-        // Для остальных типов (например, "ortho") вызываем confirmTempFile без передачи ссылки
+        // Для остальных типов (например, "ortho") вызываем confirmTempFile без передачи ссылки,
+        // и там значение берётся из поля, если есть.
         confirmTempFile(tempId, requestId)
           .then(function(data) {
             console.log("Ответ от confirmTempFile:", data);
@@ -356,20 +330,20 @@ document.addEventListener("DOMContentLoaded", function() {
             var progressBar = form.querySelector('.upload-progress-bar');
             var progressText = form.querySelector('.upload-progress-text');
             var actionContainer = form.querySelector('.upload-actions');
-            if (progressContainer) { progressContainer.style.display = 'none'; }
-            if (progressBar) { progressBar.style.width = '0%'; }
-            if (progressText) { progressText.textContent = ''; }
+
+            if (progressContainer) {
+              progressContainer.style.display = 'none';
+            }
+            if (progressBar) {
+              progressBar.style.width = '0%';
+            }
+            if (progressText) {
+              progressText.textContent = '';
+            }
             if (actionContainer) {
               actionContainer.classList.add('d-none');
-              actionContainer.style.setProperty('display', 'none', 'important');
             }
-  
-            // Сброс текста в Drop Zone
-            var dropZone = form.querySelector('.drop-zone');
-            if (dropZone) {
-              updateDropZonePrompt(dropZone, null);
-            }
-  
+
             console.log("Перезагружаем данные результата для requestId:", requestId);
             loadResultData(requestId);
           })
@@ -381,7 +355,6 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 });
-
 
 
 function uploadOverviewFiles(form, uploadType, requestId) {
@@ -503,44 +476,39 @@ function uploadPanorama(form, uploadType, requestId) {
 }
 
 // Функция для подтверждения сохранения временного файла с поддержкой передачи кастомного view_link
-function confirmTempFile(tempId, requestId, customViewLink) {
+function confirmTempFile(tempId, requestId) {
   const url = '/main_app/requests/confirm_temp_file/';
   const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-  
-  // Если customViewLink передан, используем его; иначе – считываем значение из поля "laserViewInput"
-  let viewLink = '';
-  if (typeof customViewLink !== 'undefined') {
-      viewLink = customViewLink;
-  } else {
-      const linkInput = document.getElementById('laserViewInput');
-      viewLink = linkInput ? (linkInput.value || '') : '';
-  }
-  
+
+  // Считываем текущее значение из поля для ссылки лазерного сканирования
+  const linkInput = document.getElementById('laserViewInput');
+  const viewLink = linkInput ? (linkInput.value || '') : '';
+
   console.log("Отправляем запрос по URL:", url);
   console.log("Параметры запроса: temp_id =", tempId, ", request_id =", requestId, ", view_link =", viewLink);
-  
+
   return fetch(url, {
-      method: 'POST',
-      headers: {
-          'X-CSRFToken': csrfToken,
-          'X-Requested-With': 'XMLHttpRequest',
-          'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `temp_id=${encodeURIComponent(tempId)}&request_id=${encodeURIComponent(requestId)}&view_link=${encodeURIComponent(viewLink)}`
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': csrfToken,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: `temp_id=${encodeURIComponent(tempId)}&request_id=${encodeURIComponent(requestId)}&view_link=${encodeURIComponent(viewLink)}`
   })
   .then(response => {
-      console.log("Статус ответа:", response.status);
-      if (!response.ok) {
-          throw new Error(`Ошибка подтверждения файла. Код: ${response.status}`);
-      }
-      return response.json();
+    console.log("Статус ответа:", response.status);
+    if (!response.ok) {
+      throw new Error(`Ошибка подтверждения файла. Код: ${response.status}`);
+    }
+    return response.json();
   })
   .then(data => {
-      console.log("Полученные данные:", data);
-      if (!data.success) {
-          throw new Error(data.error || 'Неизвестная ошибка при подтверждении файла');
-      }
-      return data;
+    console.log("Полученные данные:", data);
+    if (!data.success) {
+      throw new Error(data.error || 'Неизвестная ошибка при подтверждении файла');
+    }
+    return data;
   });
 }
 
@@ -733,57 +701,38 @@ function populateResultModal(data) {
       if (data.orthophoto) {
         orthoSection.style.display = 'block';
         var orthoLink = document.getElementById('orthoDownloadLink');
-        // Если файл загружен (наличие download_link)
+        // Проверяем наличие download_link
         if (data.orthophoto.download_link && data.orthophoto.download_link !== '#' && data.orthophoto.download_link !== '') {
           orthoLink.setAttribute('href', data.orthophoto.download_link);
           orthoLink.innerHTML = 'Архив: <span id="orthoArchiveName">' + (data.orthophoto.archive_name || 'Файл загружен') + '</span>';
-          
-          // Отключаем все input-элементы в форме загрузки ортофотоплана (делаем форму неактивной)
-          var orthoUploadForm = document.getElementById('orthoUploadForm');
-          if (orthoUploadForm) {
-            orthoUploadForm.querySelectorAll('input').forEach(function(input) {
-              input.disabled = true;
-            });
-          }
-          
-          // Блокируем дроп-зону ортофотоплана, чтобы она оставалась неактивной (если файл подтверждён)
-          var orthoDropZone = document.getElementById('orthoDropZone');
-          if (orthoDropZone) {
-            orthoDropZone.classList.add("drop-zone--disabled");
-          }
-          
-          // Если пользователь админ и id файла присутствует – вставляем кнопку удаления
+          // Если пользователь админ и есть id файла — вставляем крестик
           if (userIsAdmin() && data.orthophoto.id) {
             var orthoDeleteContainer = document.getElementById('orthoDeleteIconContainer');
             if (orthoDeleteContainer) {
-              orthoDeleteContainer.innerHTML =
+              orthoDeleteContainer.innerHTML = 
                 '<span class="delete-btn" data-type="ortho" data-file-id="' + data.orthophoto.id + '" title="Удалить файл">' +
                   '<i class="fas fa-times deleteFile-icon"></i>' +
                 '</span>';
             }
           } else {
+            // Если файл не найден или пользователь не админ — убираем крестик
             var orthoDeleteContainer = document.getElementById('orthoDeleteIconContainer');
-            if (orthoDeleteContainer) { orthoDeleteContainer.innerHTML = ''; }
+            if (orthoDeleteContainer) {
+              orthoDeleteContainer.innerHTML = '';
+            }
           }
         } else {
-          // Если файл отсутствует – сбрасываем ссылку и активируем форму загрузки
+          // download_link пустой — файл не загружен
           orthoLink.removeAttribute('href');
           orthoLink.textContent = 'Файлы для скачивания ещё не добавлены';
+          // Скрываем или очищаем иконку удаления
           var orthoDeleteContainer = document.getElementById('orthoDeleteIconContainer');
-          if (orthoDeleteContainer) { orthoDeleteContainer.innerHTML = ''; }
-          var orthoUploadForm = document.getElementById('orthoUploadForm');
-          if (orthoUploadForm) {
-            orthoUploadForm.querySelectorAll('input').forEach(function(input) {
-              input.disabled = false;
-            });
-          }
-          // Снимаем класс с дроп-зоны, чтобы она стала активной
-          var orthoDropZone = document.getElementById('orthoDropZone');
-          if (orthoDropZone) {
-            orthoDropZone.classList.remove("drop-zone--disabled");
+          if (orthoDeleteContainer) {
+            orthoDeleteContainer.innerHTML = '';
           }
         }
       } else {
+        // Нет данных по ортофотоплану — скрываем секцию
         orthoSection.style.display = 'none';
       }
     }
@@ -794,26 +743,15 @@ function populateResultModal(data) {
       if (data.laser) {
         laserSection.style.display = 'block';
         
-        // 1. Обработка архивной части (файл)
+        // 1. Архив (файл)
         var laserDownloadLink = document.getElementById('laserDownloadLink');
         if (laserDownloadLink) {
           if (data.laser.download_link && data.laser.download_link !== '#' && data.laser.download_link !== '') {
+            // Есть ссылка на скачивание архива
             laserDownloadLink.setAttribute('href', data.laser.download_link);
             laserDownloadLink.innerHTML = 'Архив: <span id="laserArchiveName">' + (data.laser.archive_name || 'Файл загружен') + '</span>';
             
-            // Блокируем все input-элементы в форме загрузки лазера (файл)
-            var laserUploadForm = document.getElementById('laserUploadForm');
-            if (laserUploadForm) {
-              laserUploadForm.querySelectorAll('input').forEach(function(input) {
-                input.disabled = true;
-              });
-            }
-            // Блокируем дроп-зону лазера
-            var laserDropZone = document.getElementById('laserDropZone');
-            if (laserDropZone) {
-              laserDropZone.classList.add("drop-zone--disabled");
-            }
-            // Если пользователь админ и id файла присутствует – вставляем кнопку удаления
+            // Если пользователь админ и есть ID файла, добавляем крестик
             if (userIsAdmin() && data.laser.id) {
               var laserDeleteContainer = document.getElementById('laserDeleteIconContainer');
               if (laserDeleteContainer) {
@@ -821,46 +759,33 @@ function populateResultModal(data) {
                   '<span class="delete-btn" data-type="laser" data-file-id="' + data.laser.id + '" title="Удалить архив">' +
                     '<i class="fas fa-times deleteFile-icon"></i>' +
                   '</span>';
-              }
+              }             
             } else {
+              // Не админ или нет ID — очищаем контейнер
               var laserDeleteContainer = document.getElementById('laserDeleteIconContainer');
-              if (laserDeleteContainer) { 
-                laserDeleteContainer.innerHTML = ''; 
+              if (laserDeleteContainer) {
+                laserDeleteContainer.innerHTML = '';
               }
             }
           } else {
-            // Файл отсутствует — активируем форму загрузки
+            // Архив отсутствует
             laserDownloadLink.removeAttribute('href');
             laserDownloadLink.textContent = 'Файлы для скачивания ещё не добавлены';
             var laserDeleteContainer = document.getElementById('laserDeleteIconContainer');
-            if (laserDeleteContainer) { laserDeleteContainer.innerHTML = ''; }
-            var laserUploadForm = document.getElementById('laserUploadForm');
-            if (laserUploadForm) {
-              laserUploadForm.querySelectorAll('input').forEach(function(input) {
-                input.disabled = false;
-              });
-            }
-            // Снимаем класс с дроп-зоны, чтобы сделать её активной
-            var laserDropZone = document.getElementById('laserDropZone');
-            if (laserDropZone) {
-              laserDropZone.classList.remove("drop-zone--disabled");
+            if (laserDeleteContainer) {
+              laserDeleteContainer.innerHTML = '';
             }
           }
         }
         
-        // 2. Обработка ссылки просмотра (view_link)
+        // 2. Ссылка на просмотр (view_link)
         var laserViewLink = document.getElementById('laserViewLink');
         if (laserViewLink) {
           if (data.laser.view_link && data.laser.view_link !== '#' && data.laser.view_link !== '') {
             laserViewLink.setAttribute('href', data.laser.view_link);
             laserViewLink.innerHTML = 'Просмотр результата';
             
-            // Блокируем поле ввода ссылки, так как ссылка подтверждена
-            var laserViewInput = document.getElementById('laserViewInput');
-            if (laserViewInput) {
-              laserViewInput.disabled = true;
-            }
-            
+            // Если пользователь админ и есть ID, вставляем крестик для ссылки
             if (userIsAdmin() && data.laser.id) {
               var laserViewDeleteContainer = document.getElementById('laserViewDeleteIconContainer');
               if (laserViewDeleteContainer) {
@@ -868,28 +793,30 @@ function populateResultModal(data) {
                   '<span class="delete-btn" data-type="laser_view" data-file-id="' + data.laser.id + '" title="Удалить ссылку">' +
                     '<i class="fas fa-times deleteFile-icon"></i>' +
                   '</span>';
-              }
+              }             
             } else {
               var laserViewDeleteContainer = document.getElementById('laserViewDeleteIconContainer');
-              if (laserViewDeleteContainer) { laserViewDeleteContainer.innerHTML = ''; }
+              if (laserViewDeleteContainer) {
+                laserViewDeleteContainer.innerHTML = '';
+              }
             }
           } else {
+            // Ссылки нет
             laserViewLink.removeAttribute('href');
             laserViewLink.textContent = 'Ссылка на результат отсутствует';
             var laserViewDeleteContainer = document.getElementById('laserViewDeleteIconContainer');
-            if (laserViewDeleteContainer) { laserViewDeleteContainer.innerHTML = ''; }
-            var laserViewInput = document.getElementById('laserViewInput');
-            if (laserViewInput) {
-              laserViewInput.disabled = false;
-              laserViewInput.value = "";
+            if (laserViewDeleteContainer) {
+              laserViewDeleteContainer.innerHTML = '';
             }
           }
         }
         
       } else {
+        // Данных по лазеру нет — скрываем секцию
         laserSection.style.display = 'none';
       }
     }
+
     
     // --- Панорама ---
     var panoramaSection = document.getElementById('panoramaSection');
@@ -901,13 +828,7 @@ function populateResultModal(data) {
           if (data.panorama.view_link && data.panorama.view_link !== '#' && data.panorama.view_link !== '') {
             panoramaViewLink.setAttribute('href', data.panorama.view_link);
             panoramaViewLink.innerHTML = 'Перейти к просмотру панорамы';
-            // Блокируем все input-элементы в форме панорамы (если она есть)
-            var panoramaUploadForm = document.getElementById('panoramaUploadForm');
-            if (panoramaUploadForm) {
-              panoramaUploadForm.querySelectorAll('input').forEach(function(input) {
-                input.disabled = true;
-              });
-            }
+            // Если нужен крестик для ссылки панорамы, делаем по аналогии
             if (userIsAdmin() && data.panorama.id) {
               var panoramaDeleteContainer = document.getElementById('panoramaDeleteIconContainer');
               if (panoramaDeleteContainer) {
@@ -915,21 +836,14 @@ function populateResultModal(data) {
                   '<span class="delete-btn" data-type="panorama" data-file-id="' + data.panorama.id + '" title="Удалить">' +
                     '<i class="fas fa-times deleteFile-icon"></i>' +
                   '</span>';
-              }
-            } else {
-              var panoramaDeleteContainer = document.getElementById('panoramaDeleteIconContainer');
-              if (panoramaDeleteContainer) { panoramaDeleteContainer.innerHTML = ''; }
+              }            
             }
           } else {
             panoramaViewLink.removeAttribute('href');
             panoramaViewLink.textContent = 'Ссылка на результат отсутствует';
             var panoramaDeleteContainer = document.getElementById('panoramaDeleteIconContainer');
-            if (panoramaDeleteContainer) { panoramaDeleteContainer.innerHTML = ''; }
-            var panoramaUploadForm = document.getElementById('panoramaUploadForm');
-            if (panoramaUploadForm) {
-              panoramaUploadForm.querySelectorAll('input').forEach(function(input) {
-                input.disabled = false;
-              });
+            if (panoramaDeleteContainer) {
+              panoramaDeleteContainer.innerHTML = '';
             }
           }
         }
@@ -939,6 +853,7 @@ function populateResultModal(data) {
     }
     
     // --- Обзорные фото ---
+    // Пока не изменяем, так как планируется отдельная переработка
     var overviewSection = document.getElementById('overviewSection');
     if (overviewSection) {
       if (data.overview) {
@@ -1033,94 +948,57 @@ function deleteFile(fileId, type) {
 //Обновляет внешний вид (DOM) для нужной секции после удаления элемента, сбрасывая содержимое ссылки и очищая контейнер для крестика.
 function updateSectionAfterDeletion(type) {
   if (type === "ortho") {
-    // Сбрасываем ссылку для ортофотоплана
+    // Обновляем секцию Ортофотоплана: сбрасываем ссылку на файл,
+    // активируем секцию загрузки для повторной загрузки и очищаем контейнер с крестиком.
     var orthoLink = document.getElementById("orthoDownloadLink");
     if (orthoLink) {
       orthoLink.removeAttribute("href");
       orthoLink.textContent = "Файлы для скачивания ещё не добавлены";
     }
-    // Очищаем контейнер кнопки удаления
-    var orthoDeleteContainer = document.getElementById("orthoDeleteIconContainer");
-    if (orthoDeleteContainer) {
-      orthoDeleteContainer.innerHTML = "";
+    var orthoUpload = document.getElementById("orthoUpload");
+    if (orthoUpload) {
+      orthoUpload.style.display = "block";
     }
-    // Активируем форму загрузки: разблокируем все input-элементы
-    var orthoUploadForm = document.getElementById("orthoUploadForm");
-    if (orthoUploadForm) {
-      orthoUploadForm.querySelectorAll('input').forEach(function(input) {
-        input.disabled = false;
-      });
-    }
-    // Активируем drop‑зону: снимаем класс блокировки
-    var orthoDropZone = document.getElementById("orthoDropZone");
-    if (orthoDropZone) {
-      orthoDropZone.classList.remove("drop-zone--disabled");
+    var deleteIconContainer = document.getElementById("orthoDeleteIconContainer");
+    if (deleteIconContainer) {
+      deleteIconContainer.innerHTML = "";
     }
   } else if (type === "laser") {
-    // Сбрасываем ссылку для архива лазера
+    // Полное удаление архива лазера:
+    // Сбрасываем ссылку для скачивания архива и очищаем контейнер для удаления.
     var laserLink = document.getElementById("laserDownloadLink");
     if (laserLink) {
       laserLink.removeAttribute("href");
       laserLink.textContent = "Файлы для скачивания ещё не добавлены";
     }
-    // Очищаем контейнер кнопки удаления для архива
-    var laserDeleteContainer = document.getElementById("laserDeleteIconContainer");
-    if (laserDeleteContainer) {
-      laserDeleteContainer.innerHTML = "";
-    }
-    // Активируем форму загрузки лазера: разблокируем все input-элементы
-    var laserUploadForm = document.getElementById("laserUploadForm");
-    if (laserUploadForm) {
-      laserUploadForm.querySelectorAll('input').forEach(function(input) {
-        input.disabled = false;
-      });
-    }
-    // Активируем drop‑зону лазера
-    var laserDropZone = document.getElementById("laserDropZone");
-    if (laserDropZone) {
-      laserDropZone.classList.remove("drop-zone--disabled");
+    var deleteIconContainer = document.getElementById("laserDeleteIconContainer");
+    if (deleteIconContainer) {
+      deleteIconContainer.innerHTML = "";
     }
   } else if (type === "laser_view") {
-    // Сбрасываем ссылку просмотра лазера
+    // Удаление только ссылки просмотра лазера:
+    // Сбрасываем href у ссылки просмотра и изменяем её текст,
+    // а также очищаем контейнер для крестика удаления ссылки.
     var laserViewLink = document.getElementById("laserViewLink");
     if (laserViewLink) {
       laserViewLink.removeAttribute("href");
       laserViewLink.textContent = "Ссылка на результат отсутствует";
     }
-    // Очищаем контейнер кнопки удаления ссылки просмотра
     var laserViewDeleteContainer = document.getElementById("laserViewDeleteIconContainer");
     if (laserViewDeleteContainer) {
       laserViewDeleteContainer.innerHTML = "";
     }
-    // Разблокируем и очищаем поле ввода ссылки просмотра
-    var laserViewInput = document.getElementById("laserViewInput");
-    if (laserViewInput) {
-      laserViewInput.disabled = false;
-      laserViewInput.value = "";
-    }
   } else if (type === "panorama") {
-    // Сбрасываем ссылку для панорамы
+    // Сброс секции Панорамы:
+    // Убираем атрибут href у ссылки и изменяем текст, а затем очищаем контейнер с крестиком.
     var panoramaViewLink = document.getElementById("panoramaViewLink");
     if (panoramaViewLink) {
       panoramaViewLink.removeAttribute("href");
       panoramaViewLink.textContent = "Ссылка на результат отсутствует";
     }
-    // Очищаем контейнер кнопки удаления для панорамы
     var panoramaDeleteContainer = document.getElementById("panoramaDeleteIconContainer");
     if (panoramaDeleteContainer) {
       panoramaDeleteContainer.innerHTML = "";
-    }
-    // Активируем форму загрузки панорамы: разблокируем все input-элементы
-    var panoramaUploadForm = document.getElementById("panoramaUploadForm");
-    if (panoramaUploadForm) {
-      panoramaUploadForm.querySelectorAll('input').forEach(function(input) {
-        input.disabled = false;
-      });
-    }
-    // Активируем drop‑зону панорамы (если она есть)
-    var panoramaDropZone = document.getElementById("panoramaDropZone");
-    if (panoramaDropZone) {
-      panoramaDropZone.classList.remove("drop-zone--disabled");
     }
   }
 }

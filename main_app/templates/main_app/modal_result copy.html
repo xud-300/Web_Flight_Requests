@@ -1,0 +1,226 @@
+<div id="resultModal" class="modal fade" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title">Результаты съёмки</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Контейнер для динамического наполнения разделов -->
+        <div id="resultContent">
+          
+          <!-- Индикатор загрузки (по умолчанию скрыт) -->
+          <div id="loadingIndicator" style="display: none; text-align: center; margin: 20px;">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p>Загрузка данных...</p>
+          </div>
+          
+          <!-- Раздел для Ортофотоплана -->
+          <div id="orthoSection" class="card mb-2 result-section" style="display: none;">
+            <div class="card-header">Ортофотоплан</div>
+            <div class="card-body">
+              <p>
+                <a href="#" id="orthoDownloadLink">
+                  Архив: <span id="orthoArchiveName">название_архива.zip</span>
+                </a>
+                {% if user.is_staff %}
+                  <!-- Пустой контейнер, в который JS вставляет кнопку удаления, если файл есть -->
+                  <span class="deleteFile-container" id="orthoDeleteIconContainer"></span>
+                {% endif %}
+              </p>
+              
+              {% if user.is_staff %}
+              <!-- Кнопка для загрузки результатов -->
+              <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="ortho">Загрузить</button>
+              <!-- Секция загрузки (для администраторов) -->
+              <div id="orthoUpload" class="upload-section" style="display: none;">
+                <h6 class="mb-3">Загрузить результаты для Ортофотоплана</h6>
+                <form id="orthoUploadForm" data-request-id="{{ flight_request.id }}">
+                  <!-- Область Drag-and-Drop -->
+                  <div class="drop-zone" id="orthoDropZone">
+                    <span class="drop-zone__prompt">
+                      Перетащите сюда файл или кликните для выбора
+                    </span>
+                    <input type="file" id="orthoFile" name="orthoFile" class="drop-zone__input" hidden>
+                  </div>
+                  <small class="text-muted d-block mt-2">
+                    Допустимые форматы: tif, dwg, dxf и архивы. Макс. 5 ГБ.
+                  </small>
+                  <div class="file-error text-danger mt-1" id="orthoFileError" style="font-size: 0.9em;"></div>
+                  <div class="upload-progress mb-2" style="display: none;">
+                    <div class="upload-progress-inner">
+                      <div class="upload-progress-bar"></div>
+                    </div>
+                    <div class="upload-progress-text mt-2"></div>
+                  </div>
+                  <div class="d-flex justify-content-between upload-actions d-none" style="display: none !important;">
+                    <button type="button" class="btn btn-secondary btn-sm cancelUploadBtn" data-type="ortho">Отмена</button>
+                    <button type="submit" class="btn btn-primary btn-sm" disabled>Сохранить</button>
+                  </div>
+                </form>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Раздел для Лазерного сканирования -->
+          <div id="laserSection" class="card mb-2 result-section" style="display: none;">
+            <div class="card-header">Лазерное сканирование</div>
+            <div class="card-body">
+              <p>
+                <a href="#" id="laserDownloadLink">
+                  Архив: <span id="laserArchiveName">название_архива.zip</span>
+                </a>
+                {% if user.is_staff %}
+                <!-- Контейнер для иконки удаления файла для лазера -->
+                <span class="deleteFile-container" id="laserDeleteIconContainer"></span>
+                {% endif %}
+              </p>
+              <p>
+                <a href="#" id="laserViewLink">Просмотр результата</a>
+                {% if user.is_staff %}
+                <!-- Контейнер для иконки удаления ссылки просмотра результата лазера -->
+                <span class="deleteFile-container" id="laserViewDeleteIconContainer"></span>
+                {% endif %}
+              </p>
+              {% if user.is_staff %}
+              <!-- Кнопка для открытия секции загрузки -->
+              <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="laser">Загрузить</button>
+              <!-- Секция загрузки (для администраторов) -->
+              <div id="laserUpload" class="upload-section" style="display: none;">
+                <h6 class="mb-3">Загрузить результаты для Лазерного сканирования</h6>
+                <form id="laserUploadForm" data-request-id="{{ flight_request.id }}">
+                  <!-- Область Drag-and-Drop -->
+                  <div id="laserDropZoneContainer">
+                    <div class="drop-zone" id="laserDropZone">
+                      <span class="drop-zone__prompt">
+                        Перетащите сюда файл или кликните для выбора
+                      </span>
+                      <input type="file" id="laserFile" name="laserFile" class="drop-zone__input" hidden>
+                    </div>
+                  </div>
+                  <small class="text-muted d-block mt-2">
+                    Допустимые форматы: las, dwg, dxf и архивы. Макс. 15 ГБ.
+                  </small>
+                  <!-- Поле для ввода ссылки для просмотра результата -->
+                  <div class="form-group mb-3">
+                    <label for="laserViewInput" class="font-weight-medium">Введите ссылку для просмотра результата:</label>
+                    <input type="url" id="laserViewInput" name="laserViewInput" class="form-control" placeholder="http://">
+                  </div>
+                  <div class="file-error text-danger mt-1" id="laserFileError" style="font-size: 0.9em;"></div>
+                  <!-- Прогресс-бар загрузки -->
+                  <div class="upload-progress mb-2" style="display: none;">
+                    <div class="upload-progress-inner">
+                      <div class="upload-progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="upload-progress-text mt-2"></div>
+                  </div>
+                  <div class="d-flex justify-content-between upload-actions d-none" style="display: none !important;">
+                    <button type="button" class="btn btn-secondary btn-sm cancelUploadBtn" data-type="laser">Отмена</button>
+                    <button type="submit" class="btn btn-primary btn-sm" disabled>Сохранить</button>
+                  </div>
+                </form>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Раздел для Панорамы -->
+          <div id="panoramaSection" class="card mb-2 result-section" style="display: none;">
+            <div class="card-header">Панорама</div>
+            <div class="card-body">
+              <!-- Ссылка для просмотра -->
+              <p>
+                <a href="#" id="panoramaViewLink">Ссылка на результат отсутствует</a>
+                {% if user.is_staff %}
+                <!-- Контейнер для иконки удаления ссылки панели -->
+                <span class="deleteFile-container" id="panoramaDeleteIconContainer"></span>
+                {% endif %}
+              </p>
+
+              {% if user.is_staff %}
+              <!-- Кнопка "Загрузить" (на самом деле показывает форму для ввода ссылки) -->
+              <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="panorama">Загрузить</button>
+
+              <!-- Секция загрузки (на самом деле просто ввод ссылки), скрыта по умолчанию -->
+              <div id="panoramaUpload" class="upload-section" style="display: none;">
+                <h6 class="mb-3">Сохранить ссылку для Панорамы</h6>
+                <form id="panoramaUploadForm" data-request-id="{{ flight_request.id }}">
+                  <div class="form-group mb-3">
+                    <label for="panoramaViewInput" class="font-weight-medium">Введите ссылку для просмотра панорамы:</label>
+                    <!-- Имя поля совпадает с тем, что ждёт ваша форма PanoramaUploadForm (panoramaViewInput) -->
+                    <input type="url" id="panoramaViewInput" name="panoramaViewInput" class="form-control" placeholder="http://">
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm">Сохранить</button>
+                </form>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Раздел для Обзорных фото -->
+          <div id="overviewSection" class="card mb-2 result-section" style="display: none;">
+            <div class="card-header">Обзорные фото</div>
+            <div class="card-body">
+              <p>
+                <a href="#" id="overviewDownloadLink">
+                  Архив: <span id="overviewArchiveName">название_архива.zip</span>
+                </a>
+              </p>
+              <p>
+                <a href="#" id="overviewViewLink">Просмотр фото</a>
+              </p>
+              {% if user.is_staff %}
+              <!-- Кнопка для открытия секции загрузки -->
+              <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="overview">Загрузить</button>
+              <!-- Секция загрузки (для администраторов) -->
+              <div id="overviewUpload" class="upload-section" style="display: none;">
+                <h6 class="mb-3">Загрузить результаты для Обзорных фото</h6>
+                <form id="overviewUploadForm" data-request-id="{{ flight_request.id }}" enctype="multipart/form-data">
+                  <!-- Область Drag-and-Drop -->
+                  <div id="overviewDropZoneContainer">
+                    <div class="drop-zone" id="overviewDropZone">
+                      <span class="drop-zone__prompt">
+                        Перетащите сюда файлы или кликните для выбора
+                      </span>
+                      <input type="file" id="overviewFiles" name="overviewFiles" class="drop-zone__input" multiple hidden>
+                    </div>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    Допустимые форматы: JPEG, PNG, WebP и MP4, MOV. Макс. 25 файлов, общий объём не более 2 ГБ.
+                  </small>
+                  <div class="file-error text-danger mt-1" id="overviewFileError" style="font-size: 0.9em;"></div>
+                  <!-- Прогресс-бар загрузки -->
+                  <div class="upload-progress" style="display: none;">
+                    <div class="upload-progress-inner">
+                      <div class="upload-progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="upload-progress-text mt-1"></div>
+                  </div>
+                  <div class="d-flex justify-content-between upload-actions d-none" style="display: none !important;">
+                    <button type="button" class="btn btn-secondary btn-sm cancelUploadBtn" data-type="overview">Отмена</button>
+                    <button type="submit" class="btn btn-primary btn-sm" disabled>Сохранить</button>
+                  </div>
+                </form>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+      </div>
+      
+    </div>
+  </div>
+</div>
