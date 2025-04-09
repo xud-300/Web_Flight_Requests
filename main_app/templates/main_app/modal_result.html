@@ -30,10 +30,11 @@
                   Архив: <span id="orthoArchiveName">название_архива.zip</span>
                 </a>
                 {% if user.is_staff %}
-                <!-- Контейнер для иконки удаления файла -->
-                <span class="deleteFile-container" id="orthoDeleteIconContainer"></span>
+                  <!-- Пустой контейнер, в который JS вставляет кнопку удаления, если файл есть -->
+                  <span class="deleteFile-container" id="orthoDeleteIconContainer"></span>
                 {% endif %}
               </p>
+              
               {% if user.is_staff %}
               <!-- Кнопка для загрузки результатов -->
               <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="ortho">Загрузить</button>

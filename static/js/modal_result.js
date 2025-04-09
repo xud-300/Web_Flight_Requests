@@ -714,10 +714,12 @@ function populateResultModal(data) {
             var orthoDeleteContainer = document.getElementById('orthoDeleteIconContainer');
             if (orthoDeleteContainer) {
               orthoDeleteContainer.innerHTML = 
-                '<span class="deleteFile" data-type="ortho" data-file-id="' + data.orthophoto.id + '" title="Удалить">&times;</span>';
+                '<span class="delete-btn" data-type="ortho" data-file-id="' + data.orthophoto.id + '" title="Удалить файл">' +
+                  '<i class="fas fa-times deleteFile-icon"></i>' +
+                '</span>';
             }
           } else {
-            // Очищаем контейнер, если файл есть, но пользователь не админ
+            // Если файл не найден или пользователь не админ — убираем крестик
             var orthoDeleteContainer = document.getElementById('orthoDeleteIconContainer');
             if (orthoDeleteContainer) {
               orthoDeleteContainer.innerHTML = '';
@@ -758,8 +760,10 @@ function populateResultModal(data) {
               var laserDeleteContainer = document.getElementById('laserDeleteIconContainer');
               if (laserDeleteContainer) {
                 laserDeleteContainer.innerHTML =
-                  '<span class="deleteFile" data-type="laser" data-file-id="' + data.laser.id + '" title="Удалить архив">&times;</span>';
-              }
+                  '<span class="delete-btn" data-type="laser" data-file-id="' + data.laser.id + '" title="Удалить архив">' +
+                    '<i class="fas fa-times deleteFile-icon"></i>' +
+                  '</span>';
+              }             
             } else {
               // Не админ или нет ID — очищаем контейнер
               var laserDeleteContainer = document.getElementById('laserDeleteIconContainer');
@@ -790,8 +794,10 @@ function populateResultModal(data) {
               var laserViewDeleteContainer = document.getElementById('laserViewDeleteIconContainer');
               if (laserViewDeleteContainer) {
                 laserViewDeleteContainer.innerHTML =
-                  '<span class="deleteFile" data-type="laser_view" data-file-id="' + data.laser.id + '" title="Удалить ссылку">&times;</span>';
-              }
+                  '<span class="delete-btn" data-type="laser_view" data-file-id="' + data.laser.id + '" title="Удалить ссылку">' +
+                    '<i class="fas fa-times deleteFile-icon"></i>' +
+                  '</span>';
+              }             
             } else {
               var laserViewDeleteContainer = document.getElementById('laserViewDeleteIconContainer');
               if (laserViewDeleteContainer) {
@@ -830,9 +836,11 @@ function populateResultModal(data) {
             if (userIsAdmin() && data.panorama.id) {
               var panoramaDeleteContainer = document.getElementById('panoramaDeleteIconContainer');
               if (panoramaDeleteContainer) {
-                panoramaDeleteContainer.innerHTML = 
-                  '<span class="deleteFile" data-type="panorama" data-file-id="' + data.panorama.id + '" title="Удалить">&times;</span>';
-              }
+                panoramaDeleteContainer.innerHTML =
+                  '<span class="delete-btn" data-type="panorama" data-file-id="' + data.panorama.id + '" title="Удалить">' +
+                    '<i class="fas fa-times deleteFile-icon"></i>' +
+                  '</span>';
+              }            
             }
           } else {
             panoramaViewLink.removeAttribute('href');
@@ -890,16 +898,18 @@ function populateResultModal(data) {
  *************************************************************/
 //При клике происходит подтверждение действия, и вызывается функция deleteFile().
 document.addEventListener("click", function(event) {
-  if (event.target.classList.contains("deleteFile")) {
-    // Читаем data-атрибуты: fileId и тип элемента
-    var fileId = event.target.getAttribute("data-file-id");
-    var type = event.target.getAttribute("data-type"); // например, "ortho", "laser", "laser_view", "panorama"
-    // Запрашиваем подтверждение у пользователя
+  // Ищем ближайшего родителя с классом "delete-btn"
+  var deleteEl = event.target.closest(".delete-btn");
+  if (deleteEl) {
+    // Считываем data-атрибуты из найденного элемента
+    var fileId = deleteEl.getAttribute("data-file-id");
+    var type = deleteEl.getAttribute("data-type"); // например, "ortho", "laser", "laser_view", "panorama"
     if (confirm("Вы действительно хотите удалить этот элемент?")) {
       deleteFile(fileId, type);
     }
   }
 });
+
 
 //Отправляет AJAX-запрос на сервер для удаления файла/ссылки по fileId
 function deleteFile(fileId, type) {

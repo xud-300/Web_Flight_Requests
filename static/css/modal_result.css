@@ -37,6 +37,50 @@
     border-radius: 8px;
   }
 
+/* Стили для контейнера иконки удаления */
+.deleteFile-container {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.5rem;
+  position: relative;
+}
+
+.delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #bbb;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: 0.3rem;
+  transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.6;
+}
+
+.delete-btn:hover {
+  background-color: #eee;  
+  color: #888;
+  opacity: 1;
+  text-decoration: none;
+}
+
+.delete-btn i {
+  pointer-events: none;
+  font-size: 1rem;
+}
+
+.delete-btn:active {
+  transform: scale(0.9);
+}
+
+  
+  
+
+
 /* Drag-and-Drop зона */
 .drop-zone {
     width: 100%;
