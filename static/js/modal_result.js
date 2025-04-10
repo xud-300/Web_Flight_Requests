@@ -271,7 +271,7 @@ document.addEventListener("DOMContentLoaded", function() {
 /*************************************************************
  * 6. Обработчик отправки формы — подтверждение сохранения файла
  *************************************************************/
-['ortho', 'laser', 'panorama', 'overview'].forEach(function(type) { 
+['ortho', 'laser', 'panorama', 'overview'].forEach(function(type) {
   var form = document.getElementById(type + "UploadForm");
   if (form) {
     form.addEventListener('submit', function(event) {
@@ -280,19 +280,64 @@ document.addEventListener("DOMContentLoaded", function() {
       // Получаем идентификатор заявки из data-request-id формы
       var requestId = form.getAttribute('data-request-id');
       
-      // Если это панорама, обрабатываем отдельно
+      // Специальная обработка для панорамы
       if (type === 'panorama') {
         uploadPanorama(form, type, requestId);
         return;
       }
       
-      // Если это обзорные фото (множественная загрузка), обрабатываем через отдельную функцию
+      // Обработка для множественной загрузки обзорных фото
       if (type === 'overview') {
         uploadOverviewFiles(form, type, requestId);
         return;
       }
       
-      // Для остальных типов читаем временный id файла из data-атрибута формы
+      // Если тип лазерный, проверяем, выбран ли новый файл
+      if (type === 'laser') {
+        var fileInput = form.querySelector('input[type="file"]');
+        var newFileSelected = fileInput && fileInput.files && fileInput.files.length > 0;
+        if (!newFileSelected) {
+          // Нет нового файла: пользователь обновляет только ссылку
+          var linkInput = document.getElementById('laserViewInput');
+          var customViewLink = linkInput ? linkInput.value : '';
+          confirmTempFile("", requestId, customViewLink)
+            .then(function(data) {
+              console.log("Ответ от confirmTempFile (без файла):", data);
+              alert("Ссылка успешно сохранена.");
+              form.reset();
+              delete form.dataset.tempId;
+              
+              // Сбрасываем элементы прогресса и скрываем контейнер кнопок
+              var progressContainer = form.querySelector('.upload-progress');
+              var progressBar = form.querySelector('.upload-progress-bar');
+              var progressText = form.querySelector('.upload-progress-text');
+              var actionContainer = form.querySelector('.upload-actions');
+              if (progressContainer) { progressContainer.style.display = 'none'; }
+              if (progressBar) { progressBar.style.width = '0%'; }
+              if (progressText) { progressText.textContent = ''; }
+              if (actionContainer) {
+                actionContainer.classList.add('d-none');
+                actionContainer.style.setProperty('display', 'none', 'important');
+              }
+              
+              // Сбрасываем текст в drop‑зоне
+              var dropZone = form.querySelector('.drop-zone');
+              if (dropZone) {
+                updateDropZonePrompt(dropZone, null);
+              }
+              
+              console.log("Перезагружаем данные результата для requestId:", requestId);
+              loadResultData(requestId);
+            })
+            .catch(function(error) {
+              console.error("Ошибка при подтверждении ссылки:", error);
+              alert("Ошибка при подтверждении ссылки: " + error.message);
+            });
+          return;
+        }
+      }
+      
+      // Стандартная логика — получаем временный идентификатор файла (tempId)
       var tempId = form.dataset.tempId;
       console.log("Форма для типа:", type);
       console.log("Получен requestId:", requestId);
@@ -304,9 +349,12 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       
       if (type === 'laser') {
-        // Для типа "laser" считываем актуальное значение ссылки из поля ввода
+        // Для лазера считываем актуальное значение поля "laserViewInput"
         var linkInput = document.getElementById('laserViewInput');
         var customViewLink = linkInput ? linkInput.value : '';
+        if (customViewLink.trim() === "") {
+          customViewLink = null;
+        }
         confirmTempFile(tempId, requestId, customViewLink)
           .then(function(data) {
             console.log("Ответ от confirmTempFile:", data);
@@ -314,7 +362,6 @@ document.addEventListener("DOMContentLoaded", function() {
             form.reset();
             delete form.dataset.tempId;
             
-            // Сброс элементов прогресса и скрытие контейнера кнопок
             var progressContainer = form.querySelector('.upload-progress');
             var progressBar = form.querySelector('.upload-progress-bar');
             var progressText = form.querySelector('.upload-progress-text');
@@ -327,7 +374,7 @@ document.addEventListener("DOMContentLoaded", function() {
               actionContainer.style.setProperty('display', 'none', 'important');
             }
   
-            // Сброс текста в Drop Zone (например, "Файл выбран: ..." → стандартное сообщение)
+            // Сброс drop‑зоны
             var dropZone = form.querySelector('.drop-zone');
             if (dropZone) {
               updateDropZonePrompt(dropZone, null);
@@ -335,16 +382,13 @@ document.addEventListener("DOMContentLoaded", function() {
   
             console.log("Перезагружаем данные результата для requestId:", requestId);
             loadResultData(requestId);
-  
-            // Опционально: можно заблокировать поле ввода, если требуется
-            // if (linkInput) { linkInput.disabled = true; }
           })
           .catch(function(error) {
             console.error("Ошибка при подтверждении файла:", error);
             alert("Ошибка при подтверждении файла: " + error.message);
           });
       } else {
-        // Для остальных типов (например, "ortho") вызываем confirmTempFile без передачи ссылки
+        // Для остальных типов (например, "ortho")
         confirmTempFile(tempId, requestId)
           .then(function(data) {
             console.log("Ответ от confirmTempFile:", data);
@@ -364,7 +408,7 @@ document.addEventListener("DOMContentLoaded", function() {
               actionContainer.style.setProperty('display', 'none', 'important');
             }
   
-            // Сброс текста в Drop Zone
+            // Сброс drop‑зоны
             var dropZone = form.querySelector('.drop-zone');
             if (dropZone) {
               updateDropZonePrompt(dropZone, null);

@@ -618,7 +618,7 @@ class ConfirmTempFileView(View):
         except FlightRequest.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
 
-        # Обработка множественной загрузки (overview)
+        # --- Обработка множественной загрузки (overview) ---
         temp_ids_json = request.POST.get('temp_ids')
         if temp_ids_json:
             import json
@@ -627,14 +627,13 @@ class ConfirmTempFileView(View):
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'error': 'Неверный формат temp_ids'}, status=400)
 
-            # Считываем view_link из POST. Если оно не пустое, то будем использовать его,
-            # иначе оставляем то, что было в TempResultFile
+            # Считываем view_link из POST. Если оно не пустое, то используем его, иначе — значение из TempResultFile.
             view_link = request.POST.get('view_link', '')
             for tid in temp_ids:
                 try:
                     temp_file = TempResultFile.objects.get(pk=tid, uploaded_by=request.user)
                 except TempResultFile.DoesNotExist:
-                    continue  # Можно добавить дополнительную обработку ошибки
+                    continue  # Можно добавить обработку ошибки
                 final_obj = FlightResultFile(
                     flight_request=flight,
                     result_type=temp_file.result_type,
@@ -652,38 +651,82 @@ class ConfirmTempFileView(View):
                 temp_file.delete()
             return JsonResponse({'success': True, 'message': 'Файлы подтверждены и перемещены'})
 
-        # Обработка одиночного файла (ortho, laser, panorama)
-        temp_id = request.POST.get('temp_id')
+        # --- Обработка одиночного файла (ortho, laser, panorama) ---
+        # Получаем temp_id и очищаем пробелы
+        temp_id = request.POST.get('temp_id', '').strip()
+        # Получаем актуальное значение ссылки из POST
+        view_link_param = request.POST.get('view_link', '').strip()
+
+        # Если temp_id отсутствует, но передана ссылка, обновляем только поле view_link в существующей записи
+        if not temp_id and view_link_param:
+            # Попытка найти существующую запись для данной заявки и типа "laser" (или другого, если применяется)
+            # Здесь предполагается, что именно для обновления ссылки без нового файла temp_id не передаётся
+            existing_obj = FlightResultFile.objects.filter(
+                flight_request=flight,
+                result_type='laser'  # Если нужна универсальность, можно ориентироваться на дополнительный параметр
+            ).first()
+            if existing_obj:
+                existing_obj.view_link = view_link_param
+                existing_obj.save()
+                return JsonResponse({'success': True, 'message': 'Ссылка успешно обновлена'})
+            else:
+                return JsonResponse({'success': False, 'error': 'Запись для обновления ссылки не найдена'}, status=404)
+
+        # Если по-прежнему нет temp_id, выдаём ошибку (т.е. новый файл ещё не загружен)
         if not temp_id:
             return HttpResponseBadRequest("temp_id обязательны.")
+
         try:
             temp_file = TempResultFile.objects.get(pk=temp_id, uploaded_by=request.user)
         except TempResultFile.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Temp file не найден'}, status=404)
 
-        # Считываем актуальное значение ссылки из POST.
-        # Если пользователь изменил ссылку после загрузки файла во временное хранилище,
-        # то значение view_link_param будет непустым и мы его используем.
-        view_link_param = request.POST.get('view_link', '')
-        final_view_link = view_link_param if view_link_param.strip() != '' else temp_file.view_link
+        # Определяем итоговое значение ссылки: если значение в POST не пустое, используем его;
+        # иначе оставляем значение, сохранённое во временной записи.
+        final_view_link = view_link_param if view_link_param != '' else temp_file.view_link
 
-        final_obj = FlightResultFile(
+        # Попытка найти существующую запись для этой заявки и данного типа
+        existing_obj = FlightResultFile.objects.filter(
             flight_request=flight,
-            result_type=temp_file.result_type,
-            view_link = final_view_link,
-            file_size=temp_file.file_size
-        )
-        if temp_file.file:
-            import os
-            filename = os.path.basename(temp_file.file.name)
-            with temp_file.file.open('rb') as f:
-                final_obj.file.save(filename, f, save=False)
-        final_obj.save()
+            result_type=temp_file.result_type
+        ).first()
+
+        if existing_obj:
+            # Обновляем существующую запись: сохраняем новое значение ссылки (если оно пришло)
+            existing_obj.view_link = final_view_link
+            # Если у временной записи есть файл, обновляем его в существующем объекте
+            if temp_file.file:
+                import os
+                filename = os.path.basename(temp_file.file.name)
+                if existing_obj.file:
+                    existing_obj.file.delete(save=False)
+                with temp_file.file.open('rb') as f:
+                    existing_obj.file.save(filename, f, save=False)
+                existing_obj.file_size = temp_file.file.size
+            existing_obj.save()
+            final_obj = existing_obj
+        else:
+            # Если записи нет, создаём новую
+            final_obj = FlightResultFile(
+                flight_request=flight,
+                result_type=temp_file.result_type,
+                view_link = final_view_link,
+                file_size=temp_file.file_size
+            )
+            if temp_file.file:
+                import os
+                filename = os.path.basename(temp_file.file.name)
+                with temp_file.file.open('rb') as f:
+                    final_obj.file.save(filename, f, save=False)
+            final_obj.save()
+
         if temp_file.file:
             temp_file.file.delete(save=False)
         temp_file.delete()
 
-        return JsonResponse({'success': True, 'message': 'Файл подтверждён и перемещён'})
+        return JsonResponse({'success': True, 'message': 'Файл (и/или ссылка) успешно сохранены'})
+
+
 
 
 
@@ -718,7 +761,6 @@ class DeleteResultFileView(View):
     Представление для удаления подтверждённого файла (или ссылки)
     из постоянного хранилища.
     """
-
     def post(self, request, file_id, *args, **kwargs):
         if not request.user.is_staff:
             return JsonResponse({'success': False, 'error': 'Доступ запрещен'}, status=403)
@@ -730,16 +772,30 @@ class DeleteResultFileView(View):
         except FlightResultFile.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Файл не найден'}, status=404)
         
-        # Если удаляем только ссылку для просмотра лазера
+        # 1. Если удаляем только ссылку для просмотра лазера:
         if element_type == "laser_view":
-            # Обновляем объект: очищаем поле view_link, оставляя файл нетронутым
             file_obj.view_link = ""
             file_obj.save()
+            # Если в записи после удаления ссылки нет файла, удалим запись полностью.
+            if not file_obj.file:
+                file_obj.delete()
+                return JsonResponse({'success': True, 'message': 'Ссылка удалена, запись пуста – удалена полностью'})
             return JsonResponse({'success': True, 'message': 'Ссылка удалена'})
-        # Если элемент имеет тип "panorama_view" можно аналогично обработать
-        # Для остальных случаев (например, "laser", "ortho", "panorama") удаляем полностью:
-        else:
-            if file_obj.file:
-                file_obj.file.delete(save=False)
-            file_obj.delete()
-            return JsonResponse({'success': True, 'message': 'Элемент удалён'})
+        
+        # 2. Если удаляем файл лазерного сканирования
+        if element_type == "laser":
+            if file_obj.view_link and file_obj.view_link.strip() != "":
+                # Если ссылка сохранена, удаляем только файл
+                if file_obj.file:
+                    file_obj.file.delete(save=False)
+                file_obj.file = None
+                file_obj.file_size = None
+                file_obj.save()
+                return JsonResponse({'success': True, 'message': 'Файл удалён, ссылка сохранена'})
+        
+        # 3. Для остальных случаев (или если для лазера ссылка отсутствует) – удаляем полностью:
+        if file_obj.file:
+            file_obj.file.delete(save=False)
+        file_obj.delete()
+        return JsonResponse({'success': True, 'message': 'Элемент удалён'})
+
