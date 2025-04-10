@@ -627,17 +627,17 @@ class ConfirmTempFileView(View):
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'error': 'Неверный формат temp_ids'}, status=400)
 
-            # Считываем view_link из POST. Если оно не пустое, то используем его, иначе — значение из TempResultFile.
+            # Считываем view_link из POST. Если оно не пустое, используем его, иначе – берём из TempResultFile.
             view_link = request.POST.get('view_link', '')
             for tid in temp_ids:
                 try:
                     temp_file = TempResultFile.objects.get(pk=tid, uploaded_by=request.user)
                 except TempResultFile.DoesNotExist:
-                    continue  # Можно добавить обработку ошибки
+                    continue  # Можно добавить дополнительную обработку ошибки
                 final_obj = FlightResultFile(
                     flight_request=flight,
                     result_type=temp_file.result_type,
-                    view_link = view_link if view_link.strip() != '' else temp_file.view_link,
+                    view_link=view_link if view_link.strip() != '' else temp_file.view_link,
                     file_size=temp_file.file_size
                 )
                 if temp_file.file:
@@ -652,27 +652,32 @@ class ConfirmTempFileView(View):
             return JsonResponse({'success': True, 'message': 'Файлы подтверждены и перемещены'})
 
         # --- Обработка одиночного файла (ortho, laser, panorama) ---
-        # Получаем temp_id и очищаем пробелы
+        # Получаем temp_id и убираем лишние пробелы
         temp_id = request.POST.get('temp_id', '').strip()
         # Получаем актуальное значение ссылки из POST
         view_link_param = request.POST.get('view_link', '').strip()
 
-        # Если temp_id отсутствует, но передана ссылка, обновляем только поле view_link в существующей записи
+        # Если temp_id отсутствует, но передана ссылка, обрабатываем только обновление ссылки.
+        # Здесь приведён пример для лазерного сканирования (result_type='laser').
         if not temp_id and view_link_param:
-            # Попытка найти существующую запись для данной заявки и типа "laser" (или другого, если применяется)
-            # Здесь предполагается, что именно для обновления ссылки без нового файла temp_id не передаётся
             existing_obj = FlightResultFile.objects.filter(
                 flight_request=flight,
-                result_type='laser'  # Если нужна универсальность, можно ориентироваться на дополнительный параметр
+                result_type='laser'
             ).first()
             if existing_obj:
                 existing_obj.view_link = view_link_param
                 existing_obj.save()
                 return JsonResponse({'success': True, 'message': 'Ссылка успешно обновлена'})
             else:
-                return JsonResponse({'success': False, 'error': 'Запись для обновления ссылки не найдена'}, status=404)
+                # Если записи для данного типа не найдено, создаём новую запись с указанной ссылкой.
+                final_obj = FlightResultFile.objects.create(
+                    flight_request=flight,
+                    result_type='laser',
+                    view_link=view_link_param
+                )
+                return JsonResponse({'success': True, 'message': 'Ссылка успешно сохранена (новая запись создана)'})
 
-        # Если по-прежнему нет temp_id, выдаём ошибку (т.е. новый файл ещё не загружен)
+        # Если temp_id всё ещё отсутствует, выдаём ошибку (новый файл ещё не загружен)
         if not temp_id:
             return HttpResponseBadRequest("temp_id обязательны.")
 
@@ -682,10 +687,10 @@ class ConfirmTempFileView(View):
             return JsonResponse({'success': False, 'error': 'Temp file не найден'}, status=404)
 
         # Определяем итоговое значение ссылки: если значение в POST не пустое, используем его;
-        # иначе оставляем значение, сохранённое во временной записи.
+        # иначе — оставляем значение, сохранённое во временной записи.
         final_view_link = view_link_param if view_link_param != '' else temp_file.view_link
 
-        # Попытка найти существующую запись для этой заявки и данного типа
+        # Попытка найти уже существующую запись для этой заявки и данного типа
         existing_obj = FlightResultFile.objects.filter(
             flight_request=flight,
             result_type=temp_file.result_type
@@ -710,7 +715,7 @@ class ConfirmTempFileView(View):
             final_obj = FlightResultFile(
                 flight_request=flight,
                 result_type=temp_file.result_type,
-                view_link = final_view_link,
+                view_link=final_view_link,
                 file_size=temp_file.file_size
             )
             if temp_file.file:
@@ -725,6 +730,7 @@ class ConfirmTempFileView(View):
         temp_file.delete()
 
         return JsonResponse({'success': True, 'message': 'Файл (и/или ссылка) успешно сохранены'})
+
 
 
 
