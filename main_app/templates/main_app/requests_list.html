@@ -12,7 +12,7 @@
 {% endblock %}
 
 
-{% block title %}Список заявок{% endblock %}
+{% block title %}Intix Fly{% endblock %}
 
 {% block content %}
 <!-- Заголовок и кнопка создания заявки -->
@@ -46,13 +46,13 @@
             aria-controls="sortPanel">
       <i class="fas fa-sort mr-1"></i> Сортировка
     </button>
-    <!-- Кнопки экспорта -->
-    <a href="{% url 'export_excel' %}" class="btn btn-outline-success mr-2">
+    <!-- Кнопки экспорта --> 
+    <a href="{% url 'export_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success mr-2">
       <i class="fas fa-file-excel mr-1"></i> Excel
     </a>
-    <a href="{% url 'export_pdf' %}" class="btn btn-outline-danger">
+    <a href="{% url 'export_pdf' %}?{{ request.GET.urlencode }}" target="_blank" class="btn btn-outline-danger">
       <i class="fas fa-file-pdf mr-1"></i> PDF
-    </a>
+    </a>    
   </div>
 </div>
 
@@ -387,6 +387,46 @@
             </tbody>
         </table>
     </div>
+    <div class="d-flex justify-content-center my-3">
+      <div class="pagination">
+    
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if querystring %}&amp;{{ querystring }}{% endif %}">&laquo;</a>
+        {% endif %}
+    
+        {% if page_obj.number > 3 %}
+          <a href="?page=1{% if querystring %}&amp;{{ querystring }}{% endif %}">1</a>
+          {% if page_obj.number > 4 %}
+            <span class="dots">…</span>
+          {% endif %}
+        {% endif %}
+    
+        {% for num in page_obj.paginator.page_range %}
+          {% if num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+            {% if num == page_obj.number %}
+              <span class="current">{{ num }}</span>
+            {% else %}
+              <a href="?page={{ num }}{% if querystring %}&amp;{{ querystring }}{% endif %}">{{ num }}</a>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+    
+        {% if page_obj.number < page_obj.paginator.num_pages|add:'-2' %}
+          {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+            <span class="dots">…</span>
+          {% endif %}
+          <a href="?page={{ page_obj.paginator.num_pages }}{% if querystring %}&amp;{{ querystring }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
+        {% endif %}
+    
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if querystring %}&amp;{{ querystring }}{% endif %}">&raquo;</a>
+        {% endif %}
+    
+      </div>
+    </div>
+    
+  
+  
 </div>
 
 <!-- Включаем модальные окна для создания и редактирования заявок -->

@@ -27,8 +27,8 @@
             <div class="card-body">
               <p>
                 <a href="#" id="orthoDownloadLink">
-                  Архив: <span id="orthoArchiveName">название_архива.zip</span>
-                </a>
+                  <span id="orthoArchiveName">название_архива.zip</span>
+                </a>                
                 {% if user.is_staff %}
                   <!-- Пустой контейнер, в который JS вставляет кнопку удаления, если файл есть -->
                   <span class="deleteFile-container" id="orthoDeleteIconContainer"></span>
@@ -75,7 +75,7 @@
             <div class="card-body">
               <p>
                 <a href="#" id="laserDownloadLink">
-                  Архив: <span id="laserArchiveName">название_архива.zip</span>
+                  <span id="laserArchiveName">название_архива.zip</span>
                 </a>
                 {% if user.is_staff %}
                 <!-- Контейнер для иконки удаления файла для лазера -->
@@ -83,7 +83,7 @@
                 {% endif %}
               </p>
               <p>
-                <a href="#" id="laserViewLink">Просмотр результата</a>
+                <a href="#" id="laserViewLink">Смотреть результат лазерного сканирвоания</a>
                 {% if user.is_staff %}
                 <!-- Контейнер для иконки удаления ссылки просмотра результата лазера -->
                 <span class="deleteFile-container" id="laserViewDeleteIconContainer"></span>
@@ -170,11 +170,12 @@
             <div class="card-body">
               <p>
                 <a href="#" id="overviewDownloadLink">
-                  Архив: <span id="overviewArchiveName">название_архива.zip</span>
+                  <span id="overviewArchiveName">название_архива.zip</span>
                 </a>
-              </p>
-              <p>
-                <a href="#" id="overviewViewLink">Просмотр фото</a>
+                {% if user.is_staff %}
+                <!-- Пустой контейнер, в который JS вставляет кнопку удаления, если файл есть -->
+                <span class="deleteFile-container" id="overviewDeleteIconContainer"></span>
+              {% endif %}
               </p>
               {% if user.is_staff %}
               <!-- Кнопка для открытия секции загрузки -->
@@ -187,13 +188,13 @@
                   <div id="overviewDropZoneContainer">
                     <div class="drop-zone" id="overviewDropZone">
                       <span class="drop-zone__prompt">
-                        Перетащите сюда файлы или кликните для выбора
+                        Перетащите сюда файл или кликните для выбора
                       </span>
-                      <input type="file" id="overviewFiles" name="overviewFiles" class="drop-zone__input" multiple hidden>
+                      <input type="file" id="overviewFiles" name="overviewFiles" class="drop-zone__input" hidden>
                     </div>
                   </div>
                   <small class="text-muted d-block mt-1">
-                    Допустимые форматы: JPEG, PNG, WebP и MP4, MOV. Макс. 25 файлов, общий объём не более 2 ГБ.
+                    Допустимые форматы: 'zip', 'rar', '7z', 'sit'.  Макс. 2 ГБ.
                   </small>
                   <div class="file-error text-danger mt-1" id="overviewFileError" style="font-size: 0.9em;"></div>
                   <!-- Прогресс-бар загрузки -->

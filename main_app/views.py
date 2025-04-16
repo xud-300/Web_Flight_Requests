@@ -22,6 +22,7 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
     model = FlightRequest
     template_name = 'main_app/requests_list.html'
     context_object_name = 'requests'
+    paginate_by = 25
 
     def get_queryset(self):
         qs = FlightRequest.objects.all()
@@ -84,14 +85,19 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
         return qs
 
 
-
-
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from .models import ObjectType
         context['object_types'] = ObjectType.objects.all()
+
+        # Копируем GET-параметры и удаляем параметр "page", чтобы избежать дублирования при формировании ссылок пагинации
+        params = self.request.GET.copy()
+        if 'page' in params:
+            del params['page']
+        context['querystring'] = params.urlencode()
+
         return context
+
 
 
 # Создание заявки через модальное окно.
@@ -279,31 +285,409 @@ def mass_delete_requests(request):
 
 
 
+import io
+from django.template.loader import render_to_string
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Frame, PageTemplate
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from django.utils import timezone
+from django.utils.formats import date_format as DateFormat
+from django.utils.timezone import localtime
+from django.conf import settings
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+from openpyxl.utils import get_column_letter
 
-# Заглушки для экспорта заявок в Excel.
+# Экспорт заявок в Excel
 class ExportExcelView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
+        # 1. Получаем набор заявок (администратор – все, иначе только свои)
         if request.user.is_staff:
             qs = FlightRequest.objects.all()
         else:
             qs = FlightRequest.objects.filter(user_id=request.user.id)
-        # Здесь можно использовать, например, openpyxl для формирования Excel-файла.
-        response = HttpResponse("Excel export", content_type='application/vnd.ms-excel')
-        response['Content-Disposition'] = 'attachment; filename="requests.xlsx"'
+        
+        # 1.1. Применяем фильтрацию по GET-параметрам
+        status = request.GET.get('status')
+        object_type = request.GET.get('object_type')
+        object_name = request.GET.get('object_name')
+        shooting_type = request.GET.get('shooting_type')
+        shoot_date_from = request.GET.get('shoot_date_from')
+        shoot_date_to = request.GET.get('shoot_date_to')
+        
+        if status:
+            qs = qs.filter(status=status)
+        if object_type:
+            qs = qs.filter(object_type_id=object_type)
+        if object_name:
+            qs = qs.filter(object_name_id=object_name)
+        if shooting_type:
+            qs = qs.filter(**{shooting_type: True})
+        if shoot_date_from and shoot_date_to:
+            qs = qs.filter(shoot_date_from__lte=shoot_date_to, shoot_date_to__gte=shoot_date_from)
+        elif shoot_date_from:
+            qs = qs.filter(shoot_date_to__gte=shoot_date_from)
+        elif shoot_date_to:
+            qs = qs.filter(shoot_date_from__lte=shoot_date_to)
+        
+        # 1.2. Применяем сортировку
+        sort_field = request.GET.get('sort')
+        order = request.GET.get('order', 'asc')
+        if sort_field == 'shoot_date':
+            qs = qs.order_by('-shoot_date_to' if order == 'desc' else 'shoot_date_from')
+        else:
+            allowed_sort_fields = {
+                'status': 'status',
+                'id': 'id',
+                'object_type': 'object_type__type_name'
+            }
+            if sort_field in allowed_sort_fields:
+                field_name = allowed_sort_fields[sort_field]
+                qs = qs.order_by('-' + field_name if order == 'desc' else field_name)
+            else:
+                qs = qs.order_by('-created_at')
+        
+        # 2. Формируем HTTP-ответ с типом контента для Excel
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        export_date_str = DateFormat(localtime(timezone.now())).format('Y-m-d_H-i')
+        filename = f"Flight_Requests_{export_date_str}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        # 3. Создаем рабочую книгу
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Flight Requests"
+        
+        # 4. Заголовок файла и дата экспорта (опционально, можно добавить несколько строк)
+        # Например, объединяем ячейки от A1 до I1 для заголовка
+        ws.merge_cells('A1:I1')
+        ws['A1'] = "Список заявок"
+        ws['A1'].font = Font(size=14, bold=True)
+        ws['A1'].alignment = Alignment(horizontal='center')
+
+        ws.merge_cells('A2:I2')
+        ws['A2'] = f"Дата выгрузки: {DateFormat(localtime(timezone.now())).format('d.m.Y H:i')}"
+        ws['A2'].font = Font(size=10, italic=True)
+        ws['A2'].alignment = Alignment(horizontal='center')
+
+        
+        # Начинаем данные с 4 строки
+        row_num = 4
+        
+        # 5. Заголовки столбцов и их ширины (по аналогии с расположением на сайте)
+        columns = ['Статус', '№', 'Тип объекта', 'Название объекта', 'Пикеты', 'Дата съемки', 'Тип съемки', 'Примечание', 'Создатель']
+        col_widths = [14, 8, 20, 30, 20, 30, 17, 25, 20]  # ширины в единицах Excel (примерные)
+        
+        # Заполнение заголовков
+        for col_num, column_title in enumerate(columns, 1):
+            cell = ws.cell(row=row_num, column=col_num)
+            cell.value = column_title
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            cell.border = thin_border
+            col_letter = get_column_letter(col_num)  # Используем get_column_letter
+            ws.column_dimensions[col_letter].width = col_widths[col_num - 1]
+        
+        # 6. Заполнение строк данными
+        for req in qs:
+            row_num += 1
+            # Формируем ячейки для каждого столбца
+            # Pickets
+            pikets = f"ПК{req.piket_from} – ПК{req.piket_to}" if req.piket_from and req.piket_to else ""
+            # Shoot Date
+            shoot_date = (f"{req.shoot_date_from.strftime('%d.%m.%Y')} - {req.shoot_date_to.strftime('%d.%m.%Y')}"
+                          if req.shoot_date_from and req.shoot_date_to else "")
+            # Shooting Type
+            shooting_types = []
+            if req.orthophoto:
+                shooting_types.append("Ортофотоплан")
+            if req.laser:
+                shooting_types.append("Лазерное сканирование")
+            if req.panorama:
+                shooting_types.append("Панорама")
+            if req.overview:
+                shooting_types.append("Обзорные фото")
+
+            shooting_text = ", ".join(shooting_types)
+            # Object Name
+            try:
+                object_name_value = req.object_name.object_name
+            except FlightRequest.object_name.RelatedObjectDoesNotExist:
+                object_name_value = ""
+            # Object Type
+            object_type_value = req.object_type.type_name if req.object_type else ""
+            
+            row_data = [
+                req.status,
+                req.id,
+                object_type_value,
+                object_name_value,
+                pikets,
+                shoot_date,
+                shooting_text,
+                req.note,
+                req.username,
+            ]
+            for col_num, cell_value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = cell_value
+                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+                cell.border = thin_border
+        
+        # 7. Опционально: можно зафиксировать строку заголовка
+        ws.freeze_panes = "A5"
+        
+        # 8. Сохраняем книгу в HttpResponse
+        wb.save(response)
         return response
 
 
-# Заглушка для экспорта заявок в PDF.
+
+
+
+# Экспорт заявок в PDF
 class ExportPDFView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
+        # 1. Получаем набор заявок (администратор — все, иначе только свои)
         if request.user.is_staff:
             qs = FlightRequest.objects.all()
         else:
             qs = FlightRequest.objects.filter(user_id=request.user.id)
-        # Здесь можно использовать ReportLab, xhtml2pdf или другой инструмент для формирования PDF.
-        response = HttpResponse("PDF export", content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="requests.pdf"'
+        
+        # 1.1. Применяем фильтрацию по GET-параметрам
+        status = request.GET.get('status')
+        object_type = request.GET.get('object_type')
+        object_name = request.GET.get('object_name')
+        shooting_type = request.GET.get('shooting_type')
+        shoot_date_from = request.GET.get('shoot_date_from')
+        shoot_date_to = request.GET.get('shoot_date_to')
+        
+        if status:
+            qs = qs.filter(status=status)
+        if object_type:
+            qs = qs.filter(object_type_id=object_type)
+        if object_name:
+            qs = qs.filter(object_name_id=object_name)
+        if shooting_type:
+            qs = qs.filter(**{shooting_type: True})
+        if shoot_date_from and shoot_date_to:
+            qs = qs.filter(shoot_date_from__lte=shoot_date_to, shoot_date_to__gte=shoot_date_from)
+        elif shoot_date_from:
+            qs = qs.filter(shoot_date_to__gte=shoot_date_from)
+        elif shoot_date_to:
+            qs = qs.filter(shoot_date_from__lte=shoot_date_to)
+        
+        # 1.2. Применяем сортировку
+        sort_field = request.GET.get('sort')
+        order = request.GET.get('order', 'asc')
+        if sort_field == 'shoot_date':
+            if order == 'desc':
+                qs = qs.order_by('-shoot_date_to')
+            else:
+                qs = qs.order_by('shoot_date_from')
+        else:
+            allowed_sort_fields = {
+                'status': 'status',
+                'id': 'id',
+                'object_type': 'object_type__type_name'
+            }
+            if sort_field in allowed_sort_fields:
+                field_name = allowed_sort_fields[sort_field]
+                qs = qs.order_by('-' + field_name) if order == 'desc' else qs.order_by(field_name)
+            else:
+                qs = qs.order_by('-created_at')
+        
+        # 2. Формируем HttpResponse с типом контента PDF
+        response = HttpResponse(content_type='application/pdf')
+        filename = f"Flight_Requests_{DateFormat(localtime(timezone.now())).format('d.m.Y_H-i')}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+
+        
+        # 3. Создаем буфер и документ в альбомной ориентации A4
+        buffer = io.BytesIO()
+        export_date_str = DateFormat(localtime(timezone.now())).format('Y-m-d_H-i')
+        filename = f"Flight_Requests_{export_date_str}.pdf"
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+        doc_title = f"Flight Requests {export_date_str}"
+
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A4),
+            leftMargin=20,
+            rightMargin=20,
+            topMargin=15,
+            bottomMargin=15,
+            title=doc_title  # <-- Указываем title с датой
+        )
+
+        elements = []
+        
+        # 4. Регистрация кириллического шрифта (DejaVuSans)
+        font_dir = os.path.join(settings.BASE_DIR, 'static', 'fonts')
+        font_path_regular = os.path.join(font_dir, 'DejaVuSans.ttf')
+        font_path_bold = os.path.join(font_dir, 'DejaVuSans-Bold.ttf')
+        if os.path.exists(font_path_regular) and os.path.exists(font_path_bold):
+            pdfmetrics.registerFont(TTFont('DejaVuSans', font_path_regular))
+            pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', font_path_bold))
+            base_font = 'DejaVuSans'
+            bold_font = 'DejaVuSans-Bold'
+        else:
+            base_font = 'Helvetica'
+            bold_font = 'Helvetica-Bold'
+        
+        # 5. Создаем стили с уменьшенным размером шрифта
+        styles = getSampleStyleSheet()
+        style_title = ParagraphStyle(
+            'Title',
+            parent=styles['Title'],
+            fontName=bold_font,
+            fontSize=14,
+            alignment=1
+        )
+        style_date = ParagraphStyle(
+            'Date',
+            parent=styles['Normal'],
+            fontName=base_font,
+            fontSize=10,
+            alignment=1
+        )
+        style_data = ParagraphStyle(
+            'Data',
+            parent=styles['Normal'],
+            fontName=base_font,
+            fontSize=9,
+            leading=10,
+            alignment=0  # Выравнивание по левому краю
+        )
+        style_header = ParagraphStyle(
+            'Header',
+            parent=styles['Normal'],
+            fontName=bold_font,   # Жирный шрифт
+            fontSize=9,           # Размер как у данных или немного больше, если нужно
+            leading=10,
+            alignment=1           # Центрирование заголовков
+        )
+
+
+        
+        # 6. Заголовок и дата экспорта
+        elements.append(Paragraph("Список заявок", style_title))
+        elements.append(Spacer(1, 8))
+        export_date_str = DateFormat(localtime(timezone.now())).format('d.m.Y H:i')
+        elements.append(Paragraph(f"Дата экспорта: {export_date_str}", style_date))
+        elements.append(Spacer(1, 16))
+        
+        # 7. Описание столбцов (порядок как на сайте)
+        headings = (
+            "Статус",
+            "№",
+            "Тип объекта",
+            "Название объекта",
+            "Пикеты",
+            "Дата съемки",
+            "Тип съемки",
+            "Примечание",
+            "Создатель"
+        )
+        # Оборачиваем каждую ячейку заголовка в Paragraph для переноса, если необходимо
+        table_headings = [Paragraph(h, style_header) for h in headings]
+        table_data = [table_headings]
+        
+        # 8. Формирование строк данных
+        for req in qs:
+            pikets = f"ПК{req.piket_from} – ПК{req.piket_to}" if req.piket_from and req.piket_to else ""
+            shoot_date = (
+                f"{req.shoot_date_from.strftime('%d.%m.%Y')} - {req.shoot_date_to.strftime('%d.%m.%Y')}"
+                if req.shoot_date_from and req.shoot_date_to else ""
+            )
+            shooting_types = []
+            if req.orthophoto:
+                shooting_types.append("Ортофотоплан")
+            if req.laser:
+                shooting_types.append("Лазерное сканирование")
+            if req.panorama:
+                shooting_types.append("Панорама")
+            if req.overview:
+                shooting_types.append("Обзорные фото")
+            shooting_text = ", ".join(shooting_types)
+            try:
+                object_name_value = req.object_name.object_name
+            except FlightRequest.object_name.RelatedObjectDoesNotExist:
+                object_name_value = ""
+            object_type_value = req.object_type.type_name if req.object_type else ""
+            
+            row = [
+                Paragraph(req.status, style_data),
+                Paragraph(str(req.id), style_data),
+                Paragraph(object_type_value, style_data),
+                Paragraph(object_name_value, style_data),
+                Paragraph(pikets, style_data),
+                Paragraph(shoot_date, style_data),
+                Paragraph(shooting_text, style_data),
+                Paragraph(req.note if req.note else "", style_data),
+                Paragraph(req.username if req.username else "", style_data),
+            ]
+            table_data.append(row)
+        
+        # 9. Задаем ширину столбцов так, чтобы таблица влезала на горизонтальном A4
+        col_widths = [
+            1.0*inch,  # Статус
+            0.5*inch,  # №
+            1.2*inch,  # Тип объекта
+            1.7*inch,  # Название объекта
+            1.15*inch,  # Пикеты
+            1.3*inch,  # Дата съемки
+            1.35*inch,  # Тип съемки
+            1.4*inch,  # Примечание
+            1.3*inch,  # Создатель
+        ]
+
+        # 10. Создаем таблицу
+        table = Table(table_data, colWidths=col_widths)
+        table_style = TableStyle([
+            ('BOX', (0, 0), (-1, -1), 2, colors.black),
+            ('LINEABOVE', (0, 0), (-1, 0), 2, colors.black),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 1), (-1, 1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 1), (-1, -1), 'TOP'),
+            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+        ])
+
+
+        table.setStyle(table_style)
+        elements.append(table)
+        
+        # 11. Настройка шаблона страниц (опционально)
+        frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normal')
+        template = PageTemplate(id='template', frames=[frame])
+        doc.addPageTemplates([template])
+        
+        # 12. Формируем PDF
+        doc.build(elements)
+        pdf_value = buffer.getvalue()
+        buffer.close()
+        response.write(pdf_value)
         return response
+
 
 
 @require_POST
@@ -454,7 +838,7 @@ class UploadResultView(View):
             elif upload_type == 'laser':
                 # Используем новое имя поля "laserFile"
                 temp_file = form.cleaned_data['laserFile']
-                view_link = form.cleaned_data.get('laserViewInput') or ''
+                view_link = form.cleaned_data.get('laserViewInput') or None
                 temp_result = TempResultFile.objects.create(
                     uploaded_by=request.user,
                     result_type=upload_type,
@@ -473,22 +857,18 @@ class UploadResultView(View):
                 )
                 temp_id = temp_result.id
             elif upload_type == 'overview':
-                # Получаем список файлов из поля overviewFiles
-                files = request.FILES.getlist('overviewFiles')
-                if not files:
-                    return JsonResponse({'success': False, 'error': 'Не выбраны файлы для загрузки.'}, status=400)
-                created_ids = []
-                for f in files:
-                    temp_obj = TempResultFile.objects.create(
-                        uploaded_by=request.user,
-                        result_type=upload_type,
-                        file=f,
-                        file_size=f.size
-                    )
-                    created_ids.append(temp_obj.id)
-                # Возвращаем список идентификаторов как строку JSON
-                import json
-                temp_id = json.dumps(created_ids)
+                # Получаем единичный файл из поля overviewFiles
+                temp_file = request.FILES.get('overviewFiles')
+                if not temp_file:
+                    return JsonResponse({'success': False, 'error': 'Не выбран файл для загрузки.'}, status=400)
+                temp_obj = TempResultFile.objects.create(
+                    uploaded_by=request.user,
+                    result_type=upload_type,
+                    file=temp_file,
+                    file_size=temp_file.size
+                )
+                temp_id = temp_obj.id
+
 
             return JsonResponse({
                 'success': True,
@@ -551,7 +931,7 @@ class UploadTempFileView(View):
             elif upload_type == 'laser':
                 # Используем ключ "laserFile" вместо "file"
                 temp_file = form.cleaned_data['laserFile']
-                view_link = form.cleaned_data.get('laserViewInput') or ''
+                view_link = form.cleaned_data.get('laserViewInput') or None
                 temp_result = TempResultFile.objects.create(
                     uploaded_by=request.user,
                     result_type=upload_type,
@@ -570,22 +950,18 @@ class UploadTempFileView(View):
                 )
                 temp_id = temp_result.id
             elif upload_type == 'overview':
-                # Получаем список файлов из поля overviewFiles
-                files = request.FILES.getlist('overviewFiles')
-                if not files:
-                    return JsonResponse({'success': False, 'error': 'Не выбраны файлы для загрузки.'}, status=400)
-                created_ids = []
-                for f in files:
-                    temp_obj = TempResultFile.objects.create(
-                        uploaded_by=request.user,
-                        result_type=upload_type,
-                        file=f,
-                        file_size=f.size
-                    )
-                    created_ids.append(temp_obj.id)
-                # Возвращаем список идентификаторов как строку JSON
-                import json
-                temp_id = json.dumps(created_ids)
+                # Для Overview ожидаем один файл, а не список:
+                temp_file = request.FILES.get('overviewFiles')
+                if not temp_file:
+                    return JsonResponse({'success': False, 'error': 'Не выбран файл для загрузки.'}, status=400)
+                temp_result = TempResultFile.objects.create(
+                    uploaded_by=request.user,
+                    result_type=upload_type,
+                    file=temp_file,
+                    file_size=temp_file.size
+                )
+                temp_id = temp_result.id
+
 
             return JsonResponse({
                 'success': True,
@@ -600,10 +976,10 @@ class UploadTempFileView(View):
 @method_decorator(login_required, name='dispatch')
 class ConfirmTempFileView(View):
     """
-    Принимает temp_id (для одиночных файлов) или temp_ids (для множественной загрузки Overview файлов)
-    вместе с request_id и view_link.
+    Принимает temp_id (для одиночных файлов) вместе с request_id и view_link.
     Переносит файл(ы) из TempResultFile -> FlightResultFile.
     Удаляет TempResultFile.
+    Для раздела "Обзорные фото" ожидается загрузка только одного архива.
     """
     def post(self, request, *args, **kwargs):
         if not request.user.is_staff:
@@ -618,47 +994,11 @@ class ConfirmTempFileView(View):
         except FlightRequest.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
 
-        # --- Обработка множественной загрузки (overview) ---
-        temp_ids_json = request.POST.get('temp_ids')
-        if temp_ids_json:
-            import json
-            try:
-                temp_ids = json.loads(temp_ids_json)
-            except json.JSONDecodeError:
-                return JsonResponse({'success': False, 'error': 'Неверный формат temp_ids'}, status=400)
-
-            # Считываем view_link из POST. Если оно не пустое, используем его, иначе – берём из TempResultFile.
-            view_link = request.POST.get('view_link', '')
-            for tid in temp_ids:
-                try:
-                    temp_file = TempResultFile.objects.get(pk=tid, uploaded_by=request.user)
-                except TempResultFile.DoesNotExist:
-                    continue  # Можно добавить дополнительную обработку ошибки
-                final_obj = FlightResultFile(
-                    flight_request=flight,
-                    result_type=temp_file.result_type,
-                    view_link=view_link if view_link.strip() != '' else temp_file.view_link,
-                    file_size=temp_file.file_size
-                )
-                if temp_file.file:
-                    import os
-                    filename = os.path.basename(temp_file.file.name)
-                    with temp_file.file.open('rb') as f:
-                        final_obj.file.save(filename, f, save=False)
-                final_obj.save()
-                if temp_file.file:
-                    temp_file.file.delete(save=False)
-                temp_file.delete()
-            return JsonResponse({'success': True, 'message': 'Файлы подтверждены и перемещены'})
-
-        # --- Обработка одиночного файла (ortho, laser, panorama) ---
-        # Получаем temp_id и убираем лишние пробелы
+        # --- Обработка одиночного файла (ortho, laser, panorama, overview) ---
         temp_id = request.POST.get('temp_id', '').strip()
-        # Получаем актуальное значение ссылки из POST
         view_link_param = request.POST.get('view_link', '').strip()
 
-        # Если temp_id отсутствует, но передана ссылка, обрабатываем только обновление ссылки.
-        # Здесь приведён пример для лазерного сканирования (result_type='laser').
+        # Если temp_id отсутствует, но передана ссылка — обрабатываем только обновление ссылки (например, для лазера)
         if not temp_id and view_link_param:
             existing_obj = FlightResultFile.objects.filter(
                 flight_request=flight,
@@ -669,7 +1009,6 @@ class ConfirmTempFileView(View):
                 existing_obj.save()
                 return JsonResponse({'success': True, 'message': 'Ссылка успешно обновлена'})
             else:
-                # Если записи для данного типа не найдено, создаём новую запись с указанной ссылкой.
                 final_obj = FlightResultFile.objects.create(
                     flight_request=flight,
                     result_type='laser',
@@ -686,20 +1025,22 @@ class ConfirmTempFileView(View):
         except TempResultFile.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Temp file не найден'}, status=404)
 
-        # Определяем итоговое значение ссылки: если значение в POST не пустое, используем его;
-        # иначе — оставляем значение, сохранённое во временной записи.
-        final_view_link = view_link_param if view_link_param != '' else temp_file.view_link
+        # Определяем итоговое значение ссылки:
+        # Если значение в POST не пустое, используем его; иначе — устанавливаем None.
+        final_view_link = view_link_param if view_link_param != '' else None
 
-        # Попытка найти уже существующую запись для этой заявки и данного типа
         existing_obj = FlightResultFile.objects.filter(
             flight_request=flight,
             result_type=temp_file.result_type
         ).first()
 
         if existing_obj:
-            # Обновляем существующую запись: сохраняем новое значение ссылки (если оно пришло)
+            # Если пользователь не ввёл новую ссылку (final_view_link is None),
+            # но в существующей записи уже есть ссылка, сохраняем её.
+            if final_view_link is None and existing_obj.view_link:
+                final_view_link = existing_obj.view_link
             existing_obj.view_link = final_view_link
-            # Если у временной записи есть файл, обновляем его в существующем объекте
+
             if temp_file.file:
                 import os
                 filename = os.path.basename(temp_file.file.name)
@@ -711,7 +1052,6 @@ class ConfirmTempFileView(View):
             existing_obj.save()
             final_obj = existing_obj
         else:
-            # Если записи нет, создаём новую
             final_obj = FlightResultFile(
                 flight_request=flight,
                 result_type=temp_file.result_type,
@@ -730,10 +1070,6 @@ class ConfirmTempFileView(View):
         temp_file.delete()
 
         return JsonResponse({'success': True, 'message': 'Файл (и/или ссылка) успешно сохранены'})
-
-
-
-
 
 
 
@@ -780,7 +1116,7 @@ class DeleteResultFileView(View):
         
         # 1. Если удаляем только ссылку для просмотра лазера:
         if element_type == "laser_view":
-            file_obj.view_link = ""
+            file_obj.view_link = None
             file_obj.save()
             # Если в записи после удаления ссылки нет файла, удалим запись полностью.
             if not file_obj.file:
@@ -804,4 +1140,3 @@ class DeleteResultFileView(View):
             file_obj.file.delete(save=False)
         file_obj.delete()
         return JsonResponse({'success': True, 'message': 'Элемент удалён'})
-

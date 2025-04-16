@@ -27,62 +27,68 @@ document.addEventListener('DOMContentLoaded', function() {
         objectTypeSelect.addEventListener('change', function() {
             const selectedValue = this.value;
             console.log("Изменение типа объекта в edit modal:", selectedValue);
-    
-            // Сбрасываем 'data-initial-value', чтобы не устанавливать старое значение
+        
+            // Сохраняем изначальное значение
+            const storedInitialValue = objectNameSelect.getAttribute('data-initial-value');
+        
+            // Удаляем атрибут, чтобы не подставлять старое значение при последующих изменениях
             objectNameSelect.removeAttribute('data-initial-value');
-    
-            // Ставим "Выберите название" по умолчанию
+        
+            // Сбрасываем селект названия объекта до дефолтного значения
             objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
             objectNameSelect.disabled = false;
-    
+        
             if (piketFrom) piketFrom.disabled = false;
             if (piketTo)   piketTo.disabled = false;
-    
-            // Если тип не выбран – выходим
+        
             if (!selectedValue) {
                 return;
             }
-    
+        
             // Логика для "ЖД" (id = "2")
             if (selectedValue === "2") {
                 objectNameSelect.disabled = true;
                 objectNameSelect.innerHTML = '<option value="">Нет названий</option>';
                 return;
             }
-    
+        
             // Логика для "Городок" (id = "4") — отключаем пикеты
             if (selectedValue === "4") {
                 if (piketFrom) {
                     piketFrom.value = "";
-                    piketFrom.placeholder = "";  // Очищаем подсказку
+                    piketFrom.placeholder = "";
                     piketFrom.disabled = true;
                 }
                 if (piketTo) {
                     piketTo.value = "";
-                    piketTo.placeholder = "";    // Очищаем подсказку
+                    piketTo.placeholder = "";
                     piketTo.disabled = true;
                 }
             } else {
-                // Для всех остальных типов (кроме "ЖД", обработанной выше) включаем поля и восстанавливаем placeholder
+                // Для остальных типов включаем поля и возвращаем placeholder
                 if (piketFrom) {
                     piketFrom.disabled = false;
-                    piketFrom.placeholder = "0"; // Возвращаем подсказку
+                    piketFrom.placeholder = "0";
                 }
                 if (piketTo) {
                     piketTo.disabled = false;
-                    piketTo.placeholder = "100"; // Возвращаем подсказку
+                    piketTo.placeholder = "100";
                 }
             }
-    
-            // Вызываем AJAX для обновления списка названий
-            loadObjectNames(selectedValue, objectNameSelect);
+        
+            // Передаем сохранённое значение как дополнительный параметр в loadObjectNames
+            loadObjectNames(selectedValue, objectNameSelect, storedInitialValue);
         });
+        
+        
+        
+        
     }
     
     
     
     // Вспомогательная функция для AJAX-загрузки названий
-    function loadObjectNames(selectedValue, objectNameSelect) {
+    function loadObjectNames(selectedValue, objectNameSelect, storedInitialValue) {
         if (!window.getObjectNamesUrl) {
             console.error("window.getObjectNamesUrl не определена!");
             return;
@@ -98,26 +104,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                console.log("Получены данные:", data);
-                // Мы уже до fetch() ставили "Выберите название",
-                // так что здесь можно оставить, либо ещё раз продублировать:
-                // objectNameSelect.innerHTML = '<option value="">Выберите название</option>';
-    
                 data.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item.id;
                     option.textContent = item.object_name;
                     objectNameSelect.appendChild(option);
                 });
-    
-                // Если атрибут всё ещё есть — значит, это не пользовательское изменение, а первая загрузка формы
-                const initialValue = objectNameSelect.getAttribute('data-initial-value');
-                if (initialValue) {
-                    objectNameSelect.value = initialValue;
+                // Если сохранённое начальное значение существует — устанавливаем его
+                if (storedInitialValue) {
+                    objectNameSelect.value = storedInitialValue;
                 }
             })
             .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
     }
+    
+    
+    
     
     
     
@@ -471,10 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             
-            
-            
-            
-            
+
             .catch(error => {
                 console.error("Ошибка при загрузке данных для редактирования:", error);
                 Swal.fire({

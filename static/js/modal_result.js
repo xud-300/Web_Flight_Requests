@@ -23,9 +23,9 @@ const validationRules = {
     },
     // Обзорные фото
     overview: {
-      allowedExtensions: ['mp4', 'mov', 'jpeg', 'jpg', 'png', 'webp'],
+      allowedExtensions: ['zip', 'rar', '7z', 'sit'],
       maxSizeMB: 2048, // 2 ГБ = 2048 МБ
-      maxFiles: 25
+      maxFiles: 1
     }
   };
 
@@ -353,7 +353,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var linkInput = document.getElementById('laserViewInput');
         var customViewLink = linkInput ? linkInput.value : '';
         if (customViewLink.trim() === "") {
-          customViewLink = null;
+          customViewLink = "";
         }
         confirmTempFile(tempId, requestId, customViewLink)
           .then(function(data) {
@@ -428,13 +428,26 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
+//Функция для загрузки архива для раздела "Обзорные фото".
 function uploadOverviewFiles(form, uploadType, requestId) {
   var url = '/main_app/requests/upload_temp_file/';
   var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-  var formData = new FormData(form);
-  formData.append('upload_type', uploadType);
 
-  fetch(url, {
+  // Получаем файл из поля ввода; ожидаем только один файл.
+  var fileInput = form.querySelector('#overviewFiles');
+  var file = fileInput && fileInput.files && fileInput.files[0];
+  if (!file) {
+    alert("Не выбран файл для загрузки.");
+    return;
+  }
+
+  // Формируем объект FormData и добавляем выбранный файл.
+  var formData = new FormData();
+  formData.append('upload_type', uploadType);
+  // Имя поля должно совпадать с name в input (здесь "overviewFiles")
+  formData.append('overviewFiles', file);
+
+  return fetch(url, {
     method: 'POST',
     headers: {
       'X-CSRFToken': csrfToken,
@@ -450,34 +463,70 @@ function uploadOverviewFiles(form, uploadType, requestId) {
   })
   .then(function(data) {
     if (data.success) {
-      // Для overview ожидаем, что data.temp_id вернет JSON-строку с массивом ID
-      form.dataset.tempIds = data.temp_id;  // сохраняем строку JSON
-      // Вызываем функцию подтверждения для overview файлов
-      confirmOverviewFiles(form.dataset.tempIds, requestId)
-        .then(function(responseData) {
-          alert("Файлы для обзорных фото успешно сохранены.");
-          form.reset();
-          delete form.dataset.tempIds;
-          loadResultData(requestId);
-        })
-        .catch(function(error) {
-          alert("Ошибка при подтверждении файлов: " + error.message);
-        });
+      // Проверяем, что сервер вернул temp_id (ожидаем единичное значение)
+      if (!data.temp_id) {
+        throw new Error("Не получен temp_id от сервера.");
+      }
+      // Сохраняем полученный temp_id в data-атрибут формы
+      form.dataset.tempId = data.temp_id;
+      // Вызываем функцию подтверждения, передавая temp_id и requestId.
+      // Для overview ссылка не требуется (передаём пустую строку).
+      return confirmOverviewFiles(form.dataset.tempId, requestId);
     } else {
       throw new Error(data.error);
     }
   })
+  .then(function(data) {
+    alert("Файл для обзорных фото успешно сохранён.");
+    
+    // Сброс элементов управления загрузкой: прогресс-бар, текст и контейнер кнопок
+    var progressContainer = form.querySelector('.upload-progress');
+    var progressBar = form.querySelector('.upload-progress-bar');
+    var progressText = form.querySelector('.upload-progress-text');
+    var actionContainer = form.querySelector('.upload-actions');
+  
+    if (progressContainer) { 
+      progressContainer.style.display = 'none'; 
+    }
+    if (progressBar) { 
+      progressBar.style.width = '0%'; 
+    }
+    if (progressText) { 
+      progressText.textContent = ''; 
+    }
+    if (actionContainer) {
+      actionContainer.classList.add('d-none');
+      actionContainer.style.setProperty('display', 'none', 'important');
+    }
+    
+    // Обновляем drop‑зону, сбрасывая её текст на исходный
+    var dropZone = form.querySelector('.drop-zone');
+    if (dropZone) {
+      updateDropZonePrompt(dropZone, null);
+    }
+    
+    // Удаляем data-атрибут и сбрасываем форму
+    delete form.dataset.tempId;
+    form.reset();
+    loadResultData(requestId);
+    
+    return data;
+  })
   .catch(function(error) {
     alert("Ошибка при загрузке данных: " + error.message);
+    console.error("Ошибка в uploadOverviewFiles:", error);
   });
 }
 
-function confirmOverviewFiles(tempIds, requestId) {
+
+
+// Функция для подтверждения сохранения временного файла для раздела "Обзорные фото". 
+function confirmOverviewFiles(tempId, requestId) {
   const url = '/main_app/requests/confirm_temp_file/';
   const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-  console.log("Отправляем запрос для overview. tempIds =", tempIds, ", requestId =", requestId);
-  
+  console.log("Отправляем запрос для overview. temp_id =", tempId, ", request_id =", requestId);
+
   return fetch(url, {
     method: 'POST',
     headers: {
@@ -485,21 +534,28 @@ function confirmOverviewFiles(tempIds, requestId) {
       'X-Requested-With': 'XMLHttpRequest',
       'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body: `temp_ids=${encodeURIComponent(tempIds)}&request_id=${encodeURIComponent(requestId)}`
+    // Передаём temp_id, request_id и пустое значение для view_link (для overview ссылка не нужна)
+    body: `temp_id=${encodeURIComponent(tempId)}&request_id=${encodeURIComponent(requestId)}&view_link=${encodeURIComponent("")}`
   })
-  .then(response => {
+  .then(function(response) {
     if (!response.ok) {
-      throw new Error("Ошибка подтверждения файлов. Код: " + response.status);
+      throw new Error("Ошибка подтверждения файла. Код: " + response.status);
     }
     return response.json();
   })
-  .then(data => {
+  .then(function(data) {
     if (!data.success) {
-      throw new Error(data.error || 'Неизвестная ошибка при подтверждении файлов');
+      throw new Error(data.error || 'Неизвестная ошибка при подтверждении файла');
     }
     return data;
+  })
+  .catch(function(error) {
+    console.error("Ошибка в confirmOverviewFiles:", error);
+    throw error;
   });
 }
+
+
 
 
 // Функция для обработки загрузки панорамы (без файла)
@@ -754,9 +810,6 @@ $('#resultModal').on('hidden.bs.modal', function () {
 });
 
 
-
-
-
 /*************************************************************
  * Функция userIsAdmin
  * Определяет, является ли текущий пользователь администратором.
@@ -780,7 +833,7 @@ function populateResultModal(data) {
         // Если файл загружен (наличие download_link)
         if (data.orthophoto.download_link && data.orthophoto.download_link !== '#' && data.orthophoto.download_link !== '') {
           orthoLink.setAttribute('href', data.orthophoto.download_link);
-          orthoLink.innerHTML = 'Архив: <span id="orthoArchiveName">' + (data.orthophoto.archive_name || 'Файл загружен') + '</span>';
+          orthoLink.innerHTML = '<span id="orthoArchiveName">' + (data.orthophoto.archive_name || 'Файл загружен') + '</span>';
           
           // Отключаем все input-элементы в форме загрузки ортофотоплана (делаем форму неактивной)
           var orthoUploadForm = document.getElementById('orthoUploadForm');
@@ -843,7 +896,7 @@ function populateResultModal(data) {
         if (laserDownloadLink) {
           if (data.laser.download_link && data.laser.download_link !== '#' && data.laser.download_link !== '') {
             laserDownloadLink.setAttribute('href', data.laser.download_link);
-            laserDownloadLink.innerHTML = 'Архив: <span id="laserArchiveName">' + (data.laser.archive_name || 'Файл загружен') + '</span>';
+            laserDownloadLink.innerHTML = '<span id="laserArchiveName">' + (data.laser.archive_name || 'Файл загружен') + '</span>';
             
             // Блокируем все input-элементы в форме загрузки лазера (файл)
             var laserUploadForm = document.getElementById('laserUploadForm');
@@ -897,7 +950,7 @@ function populateResultModal(data) {
         if (laserViewLink) {
           if (data.laser.view_link && data.laser.view_link !== '#' && data.laser.view_link !== '') {
             laserViewLink.setAttribute('href', data.laser.view_link);
-            laserViewLink.innerHTML = 'Просмотр результата';
+            laserViewLink.innerHTML = 'Смотреть результат лазерного сканирования';
             
             // Блокируем поле ввода ссылки, так как ссылка подтверждена
             var laserViewInput = document.getElementById('laserViewInput');
@@ -990,28 +1043,54 @@ function populateResultModal(data) {
         var overviewDownloadLink = document.getElementById('overviewDownloadLink');
         if (overviewDownloadLink) {
           if (data.overview.download_link && data.overview.download_link !== '#' && data.overview.download_link !== '') {
+            // Обновляем ссылку для скачивания
             overviewDownloadLink.setAttribute('href', data.overview.download_link);
-            overviewDownloadLink.innerHTML = 'Архив: <span id="overviewArchiveName">' + (data.overview.archive_name || 'Файл загружен') + '</span>';
+            overviewDownloadLink.innerHTML = '<span id="overviewArchiveName">' + (data.overview.archive_name || 'Файл загружен') + '</span>';
+            
+            // Если пользователь — администратор и файл загружен, добавляем кнопку удаления
+            if (userIsAdmin() && data.overview.id) {
+              var overviewDeleteContainer = document.getElementById('overviewDeleteIconContainer');
+              if (overviewDeleteContainer) {
+                overviewDeleteContainer.innerHTML =
+                  '<span class="delete-btn" data-type="overview" data-file-id="' + data.overview.id + '" title="Удалить архив">' +
+                    '<i class="fas fa-times deleteFile-icon"></i>' +
+                  '</span>';
+              }
+            } else {
+              var overviewDeleteContainer = document.getElementById('overviewDeleteIconContainer');
+              if (overviewDeleteContainer) { overviewDeleteContainer.innerHTML = ''; }
+            }
+            
+            // ********** Новое: Отключаем форму загрузки для Overview **********
+            var overviewUploadForm = document.getElementById('overviewUploadForm');
+            if (overviewUploadForm) {
+              // Отключаем все input-элементы формы
+              overviewUploadForm.querySelectorAll('input').forEach(function(input) {
+                input.disabled = true;
+              });
+            }
+            // Блокируем drop‑зону
+            var overviewDropZone = document.getElementById('overviewDropZone');
+            if (overviewDropZone) {
+              overviewDropZone.classList.add("drop-zone--disabled");
+            }
+            // *******************************************************************
+            
           } else {
+            // Если файла нет – сбрасываем ссылку и очищаем контейнер удаления
             overviewDownloadLink.removeAttribute('href');
             overviewDownloadLink.textContent = 'Файлы для скачивания ещё не добавлены';
-          }
-        }
-        var overviewViewLink = document.getElementById('overviewViewLink');
-        if (overviewViewLink) {
-          if (data.overview.view_link && data.overview.view_link !== '#' && data.overview.view_link !== '') {
-            overviewViewLink.setAttribute('href', data.overview.view_link);
-            overviewViewLink.innerHTML = 'Просмотр фото';
-          } else {
-            overviewViewLink.removeAttribute('href');
-            overviewViewLink.textContent = 'Фото отсутствуют';
+            var overviewDeleteContainer = document.getElementById('overviewDeleteIconContainer');
+            if (overviewDeleteContainer) {
+              overviewDeleteContainer.innerHTML = '';
+            }
           }
         }
       } else {
         overviewSection.style.display = 'none';
       }
     }
-    
+   
   } catch (error) {
     console.error("Ошибка в populateResultModal:", error);
   }
@@ -1166,5 +1245,31 @@ function updateSectionAfterDeletion(type) {
     if (panoramaDropZone) {
       panoramaDropZone.classList.remove("drop-zone--disabled");
     }
+  } else if (type === "overview") {
+  // Сбрасываем ссылку для обзора архивного файла (Overview)
+  var overviewLink = document.getElementById("overviewDownloadLink");
+  if (overviewLink) {
+    overviewLink.removeAttribute("href");
+    overviewLink.textContent = "Файлы для скачивания ещё не добавлены";
   }
+  // Очищаем контейнер кнопки удаления для overview
+  var overviewDeleteContainer = document.getElementById("overviewDeleteIconContainer");
+  if (overviewDeleteContainer) {
+    overviewDeleteContainer.innerHTML = "";
+  }
+  // Активируем форму загрузки: разблокируем все input-элементы
+  var overviewUploadForm = document.getElementById("overviewUploadForm");
+  if (overviewUploadForm) {
+    overviewUploadForm.querySelectorAll('input').forEach(function(input) {
+      input.disabled = false;
+    });
+  }
+  // Активируем drop‑зону: снимаем класс блокировки
+  var overviewDropZone = document.getElementById("overviewDropZone");
+  if (overviewDropZone) {
+    overviewDropZone.classList.remove("drop-zone--disabled");
+  }
+}
+
+  
 }
