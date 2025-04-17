@@ -286,12 +286,6 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       
-      // Обработка для множественной загрузки обзорных фото
-      if (type === 'overview') {
-        uploadOverviewFiles(form, type, requestId);
-        return;
-      }
-      
       // Если тип лазерный, проверяем, выбран ли новый файл
       if (type === 'laser') {
         var fileInput = form.querySelector('input[type="file"]');
@@ -303,7 +297,6 @@ document.addEventListener("DOMContentLoaded", function() {
           confirmTempFile("", requestId, customViewLink)
             .then(function(data) {
               console.log("Ответ от confirmTempFile (без файла):", data);
-              alert("Ссылка успешно сохранена.");
               form.reset();
               delete form.dataset.tempId;
               
@@ -358,7 +351,6 @@ document.addEventListener("DOMContentLoaded", function() {
         confirmTempFile(tempId, requestId, customViewLink)
           .then(function(data) {
             console.log("Ответ от confirmTempFile:", data);
-            alert("Файл и ссылка успешно сохранены.");
             form.reset();
             delete form.dataset.tempId;
             
@@ -388,11 +380,10 @@ document.addEventListener("DOMContentLoaded", function() {
             alert("Ошибка при подтверждении файла: " + error.message);
           });
       } else {
-        // Для остальных типов (например, "ortho")
+        // Для остальных типов
         confirmTempFile(tempId, requestId)
           .then(function(data) {
             console.log("Ответ от confirmTempFile:", data);
-            alert("Файл успешно сохранён.");
             form.reset();
             delete form.dataset.tempId;
             
@@ -427,133 +418,6 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
-
-//Функция для загрузки архива для раздела "Обзорные фото".
-function uploadOverviewFiles(form, uploadType, requestId) {
-  var url = '/main_app/requests/upload_temp_file/';
-  var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-  // Получаем файл из поля ввода; ожидаем только один файл.
-  var fileInput = form.querySelector('#overviewFiles');
-  var file = fileInput && fileInput.files && fileInput.files[0];
-  if (!file) {
-    alert("Не выбран файл для загрузки.");
-    return;
-  }
-
-  // Формируем объект FormData и добавляем выбранный файл.
-  var formData = new FormData();
-  formData.append('upload_type', uploadType);
-  // Имя поля должно совпадать с name в input (здесь "overviewFiles")
-  formData.append('overviewFiles', file);
-
-  return fetch(url, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': csrfToken,
-      'X-Requested-With': 'XMLHttpRequest'
-    },
-    body: formData
-  })
-  .then(function(response) {
-    if (!response.ok) {
-      throw new Error("Ошибка загрузки данных. Код: " + response.status);
-    }
-    return response.json();
-  })
-  .then(function(data) {
-    if (data.success) {
-      // Проверяем, что сервер вернул temp_id (ожидаем единичное значение)
-      if (!data.temp_id) {
-        throw new Error("Не получен temp_id от сервера.");
-      }
-      // Сохраняем полученный temp_id в data-атрибут формы
-      form.dataset.tempId = data.temp_id;
-      // Вызываем функцию подтверждения, передавая temp_id и requestId.
-      // Для overview ссылка не требуется (передаём пустую строку).
-      return confirmOverviewFiles(form.dataset.tempId, requestId);
-    } else {
-      throw new Error(data.error);
-    }
-  })
-  .then(function(data) {
-    alert("Файл для обзорных фото успешно сохранён.");
-    
-    // Сброс элементов управления загрузкой: прогресс-бар, текст и контейнер кнопок
-    var progressContainer = form.querySelector('.upload-progress');
-    var progressBar = form.querySelector('.upload-progress-bar');
-    var progressText = form.querySelector('.upload-progress-text');
-    var actionContainer = form.querySelector('.upload-actions');
-  
-    if (progressContainer) { 
-      progressContainer.style.display = 'none'; 
-    }
-    if (progressBar) { 
-      progressBar.style.width = '0%'; 
-    }
-    if (progressText) { 
-      progressText.textContent = ''; 
-    }
-    if (actionContainer) {
-      actionContainer.classList.add('d-none');
-      actionContainer.style.setProperty('display', 'none', 'important');
-    }
-    
-    // Обновляем drop‑зону, сбрасывая её текст на исходный
-    var dropZone = form.querySelector('.drop-zone');
-    if (dropZone) {
-      updateDropZonePrompt(dropZone, null);
-    }
-    
-    // Удаляем data-атрибут и сбрасываем форму
-    delete form.dataset.tempId;
-    form.reset();
-    loadResultData(requestId);
-    
-    return data;
-  })
-  .catch(function(error) {
-    alert("Ошибка при загрузке данных: " + error.message);
-    console.error("Ошибка в uploadOverviewFiles:", error);
-  });
-}
-
-
-
-// Функция для подтверждения сохранения временного файла для раздела "Обзорные фото". 
-function confirmOverviewFiles(tempId, requestId) {
-  const url = '/main_app/requests/confirm_temp_file/';
-  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-  console.log("Отправляем запрос для overview. temp_id =", tempId, ", request_id =", requestId);
-
-  return fetch(url, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': csrfToken,
-      'X-Requested-With': 'XMLHttpRequest',
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    // Передаём temp_id, request_id и пустое значение для view_link (для overview ссылка не нужна)
-    body: `temp_id=${encodeURIComponent(tempId)}&request_id=${encodeURIComponent(requestId)}&view_link=${encodeURIComponent("")}`
-  })
-  .then(function(response) {
-    if (!response.ok) {
-      throw new Error("Ошибка подтверждения файла. Код: " + response.status);
-    }
-    return response.json();
-  })
-  .then(function(data) {
-    if (!data.success) {
-      throw new Error(data.error || 'Неизвестная ошибка при подтверждении файла');
-    }
-    return data;
-  })
-  .catch(function(error) {
-    console.error("Ошибка в confirmOverviewFiles:", error);
-    throw error;
-  });
-}
 
 
 
@@ -592,7 +456,6 @@ function uploadPanorama(form, uploadType, requestId) {
     }
   })
   .then(function(data) {
-    alert("Панорама успешно сохранена.");
     form.reset();
     delete form.dataset.tempId;
     loadResultData(requestId);
@@ -689,7 +552,6 @@ document.querySelectorAll('.cancelUploadBtn').forEach(function(btn) {
     if (tempId) {
       cancelTempFile(tempId)
         .then(function(data) {
-          alert("Загрузка отменена, временный файл удалён.");
           form.reset();
           delete form.dataset.tempId;
           hideUploadControls(form); // скрываем кнопки и прогрессбар
@@ -1141,8 +1003,6 @@ function deleteFile(fileId, type) {
   })
   .then(function(data) {
       if (data.success) {
-          alert(data.message);
-          // Обновляем DOM для нужной секции
           updateSectionAfterDeletion(type);
       } else {
           alert("Ошибка: " + data.error);

@@ -1074,6 +1074,7 @@ class ConfirmTempFileView(View):
 
 
 
+
 @method_decorator(login_required, name='dispatch')
 class CancelTempFileView(View):
     """
