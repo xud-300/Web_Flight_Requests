@@ -176,8 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    
-    
 
 
     // Функция для обработки отправки формы редактирования
@@ -209,10 +207,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             showConfirmButton: false,
                             timer: 1500
                         }).then(() => {
-                            const editModal = document.getElementById('editRequestModal');
-                            if (editModal) editModal.style.display = 'none';
+                            $('#editRequestModal').modal('hide');
                             location.reload();
-                        });
+                            });                        
                     } else {
                         updateFormErrors(editRequestForm, data.errors);
                     }
@@ -272,10 +269,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 showConfirmButton: false,
                                 timer: 1500
                             }).then(() => {
-                                const editModal = document.getElementById('editRequestModal');
-                                if (editModal) editModal.style.display = 'none';
+                                $('#editRequestModal').modal('hide');
                                 location.reload();
-                            });
+                            });                            
                         } else {
                             Swal.fire({
                                 icon: 'error',
@@ -380,27 +376,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
         // Функция переключения истории
         function attachHistoryToggle() {
-            const toggleBtn = document.getElementById('toggleHistoryBtn');
-            const historyBlock = document.getElementById('requestHistory');
-            const historyTitle = document.getElementById('historyTitle');
-            if (!toggleBtn || !historyBlock) return;
-    
-            // Изначально скрыто (если хотите по умолчанию открытым — уберите style="display: none;" в HTML)
-            // При клике показываем/скрываем
-            toggleBtn.addEventListener('click', function() {
-                if (historyBlock.style.display === 'none') {
-                    // Показываем
-                    historyBlock.style.display = 'block';
-                    historyTitle.style.display = 'block';
-                    toggleBtn.textContent = 'Скрыть историю изменений ▲';
+            const toggleBtn = $('#toggleHistoryBtn');
+            const historyBlock = $('#requestHistory');
+            const historyTitle = $('#historyTitle');
+        
+            // Прячем изначально через jQuery, чтобы мы точно знали, что hidden
+            historyTitle.hide();
+            historyBlock.hide();
+        
+            toggleBtn.on('click', function() {
+                // Плавно выезжает/уезжает заголовок
+                historyTitle.slideToggle(200);
+                // Плавно выезжает/уезжает сам блок истории
+                historyBlock.slideToggle(200);
+        
+                // Меняем текст кнопки по состоянию:
+                if (historyBlock.is(':visible')) {
+                    toggleBtn.text('Показать историю изменений ▼');
                 } else {
-                    // Скрываем
-                    historyBlock.style.display = 'none';
-                    historyTitle.style.display = 'none';
-                    toggleBtn.textContent = 'Показать историю изменений ▼';
+                    toggleBtn.text('Скрыть историю изменений ▲');
                 }
             });
         }
+        
 
     
     // Обработчик для всех кнопок редактирования заявки
@@ -469,7 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 const editModal = document.getElementById('editRequestModal');
                 if (editModal) {
-                    editModal.style.display = 'block';
+                    $('#editRequestModal').modal('show');
                 }
             })
             
@@ -492,15 +490,8 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             const modal = this.closest('.modal');
             if (modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
-    window.addEventListener('click', function(event) {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(function(modal) {
-            if (event.target === modal) {
-                modal.style.display = 'none';
+                $('#editRequestModal').modal('hide');
+
             }
         });
     });

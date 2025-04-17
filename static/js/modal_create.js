@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', function() {
         createRequestBtn.addEventListener('click', function() {
             const modal = document.getElementById('createRequestModal');
             if (modal) {
-                modal.style.display = 'block';
+                $('#createRequestModal').modal('show');
+
             }
         });
     }
@@ -220,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }).then(() => {
                         const modal = document.getElementById('createRequestModal');
                         if (modal) {
-                            modal.style.display = 'none';
+                            $('#createRequestModal').modal('hide');
                         }
                         location.reload();
                     });
@@ -283,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Закрываем модальное окно
-                createModal.style.display = 'none';
+                $('#createRequestModal').modal('hide');
             });
         }
     }

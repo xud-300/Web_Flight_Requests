@@ -17,17 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('sortPanelOpen', $(this).hasClass('show'));
     });
     
-    // --- Закрытие модальных окон ---
-    const closeModalBtns = document.querySelectorAll('.modal .close');
-    closeModalBtns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const modal = this.closest('.modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
-       
+    
   // Обработчик для кнопок "Результат"
   document.querySelectorAll('.resultBtn').forEach(function(button) {
     button.addEventListener('click', function() {
@@ -80,15 +70,6 @@ function setRequestIdInForms(requestId) {
     });
   }
   
-    window.addEventListener('click', function(event) {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(function(modal) {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
-    
     // --- Фильтрация: динамическая подгрузка названий объектов ---
     const objectTypeFilter = document.getElementById('objectTypeFilter');
     const objectNameFilterContainer = document.getElementById('objectNameFilterContainer');

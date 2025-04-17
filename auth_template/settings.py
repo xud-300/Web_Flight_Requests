@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts',
     'captcha',
-    'main_app',
+    'main_app.apps.MainAppConfig',
+
 ]
 
 # Промежуточное ПО (middleware)
