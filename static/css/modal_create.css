@@ -20,9 +20,6 @@
   .modal.fade.show {
     opacity: 1;
   }
-  body.modal-open {
-    overflow: hidden;
-  }
   
   
   .modal-dialog {
