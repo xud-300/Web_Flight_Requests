@@ -17,6 +17,7 @@ from .views import (
     ConfirmTempFileView,
     CancelTempFileView,
     DeleteResultFileView,
+    undo_action,
 )
 
 urlpatterns = [
@@ -35,4 +36,6 @@ urlpatterns = [
     path('requests/confirm_temp_file/', ConfirmTempFileView.as_view(), name='confirm_temp_file'),
     path('requests/cancel_temp_file/', CancelTempFileView.as_view(), name='cancel_temp_file'),
     path('requests/delete_result_file/<int:file_id>/', DeleteResultFileView.as_view(), name='delete_result_file'),
+    path('requests/undo/<int:action_id>/', undo_action, name='undo_action'),
+
 ]

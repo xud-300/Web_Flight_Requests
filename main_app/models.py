@@ -241,3 +241,27 @@ class TempResultFile(models.Model):
         return f"Temp file {self.file.name} (type={self.result_type})"
 
 
+class UndoAction(models.Model):
+    """
+    Модель для отмены массовых действий
+    """
+    ACTION_TYPES = [
+        ('mass_status', 'Массовое изменение статуса'),
+        ('mass_delete', 'Массовое удаление'),
+    ]
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
+    payload = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'undo_actions'
+        indexes = [
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"UndoAction {self.action_type} by {self.user} at {self.created_at}"

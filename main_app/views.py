@@ -8,13 +8,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django import forms
 from django.template.loader import render_to_string
-from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser
+from .models import FlightRequest, RequestHistory, Object, ObjectType, TelegramUser, UndoAction
 from main_app.models import User
 from .forms import FlightRequestCreateForm, FlightRequestEditForm
 from django.views.decorators.http import require_POST, require_GET
 from django.utils.decorators import method_decorator
 from .models import FlightRequest, FlightResultFile
 from .upload_forms import OrthoUploadForm, LaserUploadForm, PanoramaUploadForm, OverviewUploadForm
+from django.utils.dateparse import parse_datetime
 
 
 # Список заявок
@@ -80,7 +81,7 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
                 else:
                     qs = qs.order_by(field_name)
             else:
-                qs = qs.order_by('-created_at')
+                qs = qs.order_by('created_at')
         
         return qs
 
@@ -239,29 +240,43 @@ def get_object_names(request):
 def mass_update_status(request):
     if not request.user.is_staff:
         return HttpResponseForbidden("Доступ запрещен")
+
     try:
         data = json.loads(request.body)
         request_ids = data.get('request_ids', [])
         new_status = data.get('new_status')
-        
-        # Допустимые варианты статуса:
+
         if not request_ids or new_status not in ['Новая', 'В работе', 'Выполнена']:
             return JsonResponse({'success': False, 'error': 'Неверные параметры'})
-        
+
+        # 1) Получаем старые статусы для «Undo»
         qs = FlightRequest.objects.filter(id__in=request_ids)
-        for flight_request in qs:
-            old_status = flight_request.status
-            flight_request.status = new_status
-            flight_request.save(update_fields=['status'])
-            
+        old_statuses = {str(fr.id): fr.status for fr in qs}
+
+        # 2) Создаём запись UndoAction
+        undo = UndoAction.objects.create(
+            user=request.user,
+            action_type='mass_status',
+            payload={
+                'request_ids': request_ids,
+                'old_statuses': old_statuses
+            }
+        )
+
+        # 3) Сама массовая смена статуса + история
+        for fr in qs:
+            old = fr.status
+            fr.status = new_status
+            fr.save(update_fields=['status'])
             RequestHistory.objects.create(
-                flight_request=flight_request,
+                flight_request=fr,
                 changed_by=request.user,
-                changes=json.dumps({'status': [old_status, new_status]}, ensure_ascii=False)
+                changes=json.dumps({'status': [old, new_status]}, ensure_ascii=False)
             )
-        
-        return JsonResponse({'success': True})
-    
+
+        # 4) Возвращаем action_id для последующей отмены
+        return JsonResponse({'success': True, 'action_id': undo.id})
+
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
@@ -276,12 +291,96 @@ def mass_delete_requests(request):
         request_ids = data.get('request_ids', [])
         if not request_ids:
             return JsonResponse({'success': False, 'error': 'Нет заявок для удаления'})
-        
-        FlightRequest.objects.filter(id__in=request_ids).delete()
-        
-        return JsonResponse({'success': True})
+
+        # 1) Собираем полные данные заявок для восстановления
+        qs = FlightRequest.objects.filter(id__in=request_ids)
+        requests_data = []
+        for fr in qs:
+            requests_data.append({
+                'id': fr.id,
+                'user_id': fr.user_id,
+                'username': fr.username,
+                'piket_from': fr.piket_from,
+                'piket_to': fr.piket_to,
+                'shoot_date_from': fr.shoot_date_from.isoformat() if fr.shoot_date_from else None,
+                'shoot_date_to': fr.shoot_date_to.isoformat() if fr.shoot_date_to else None,
+                'note': fr.note,
+                'kml_file_id': fr.kml_file_id,
+                'status': fr.status,
+                'created_at': fr.created_at.isoformat(),
+                'orthophoto': fr.orthophoto,
+                'laser': fr.laser,
+                'panorama': fr.panorama,
+                'overview': fr.overview,
+                'object_type_id': fr.object_type_id,
+                'object_name_id': fr.object_name_id,
+            })
+
+        # 2) Создаём UndoAction
+        undo = UndoAction.objects.create(
+            user=request.user,
+            action_type='mass_delete',
+            payload={'requests': requests_data}
+        )
+
+        # 3) Удаляем сами заявки (и каскадно всё остальное)
+        qs.delete()
+
+        # 4) Отправляем назад action_id для кнопки «Отменить»
+        return JsonResponse({'success': True, 'action_id': undo.id})
+
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+# AJAX-обработчик для отмены массовыхдействий.
+@require_POST
+@login_required
+def undo_action(request, action_id):
+    # 1) Получаем UndoAction и проверяем, что это тот же пользователь
+    try:
+        action = UndoAction.objects.get(pk=action_id, user=request.user)
+    except UndoAction.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Действие не найдено'})
+
+    # 2) Проверяем, не вышло ли время (5 секунд)
+    if (timezone.now() - action.created_at).total_seconds() > 5:
+        action.delete()
+        return JsonResponse({'success': False, 'error': 'Время для отмены истекло'})
+
+    # 3) В зависимости от типа выполняем обратную логику
+    payload = action.payload
+    if action.action_type == 'mass_status':
+        # Восстанавливаем старые статусы
+        for req_id, old_status in payload.get('old_statuses', {}).items():
+            FlightRequest.objects.filter(id=int(req_id)).update(status=old_status)
+    elif action.action_type == 'mass_delete':
+        # Восстанавливаем удалённые заявки
+        for data in payload.get('requests', []):
+            FlightRequest.objects.create(
+                id=data['id'],
+                user_id=data['user_id'],
+                username=data['username'],
+                piket_from=data['piket_from'],
+                piket_to=data['piket_to'],
+                shoot_date_from=data['shoot_date_from'],
+                shoot_date_to=data['shoot_date_to'],
+                note=data['note'],
+                kml_file_id=data['kml_file_id'],
+                status=data['status'],
+                created_at=parse_datetime(data['created_at']),
+                orthophoto=data['orthophoto'],
+                laser=data['laser'],
+                panorama=data['panorama'],
+                overview=data['overview'],
+                object_type_id=data['object_type_id'],
+                object_name_id=data['object_name_id'],
+            )
+    else:
+        return JsonResponse({'success': False, 'error': 'Неподдерживаемый тип действия'})
+
+    # 4) Удаляем запись об Undo и подтверждаем успех
+    action.delete()
+    return JsonResponse({'success': True})
 
 
 

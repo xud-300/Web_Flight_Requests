@@ -181,8 +181,9 @@
     </div>
     {% if user.is_staff %}
     <!-- Панель массового обновления -->
-    <div id="massUpdatePanel" class="collapse my-3">
-      <div class="card card-body py-2">
+    <div id="massUpdatePanel" class="collapse">
+      <!-- Маргин теперь внутри, и он будет анимироваться вместе с высотой -->
+      <div class="card card-body py-2 my-3">
         <!-- Общий контейнер: сообщение слева, кнопки справа -->
         <div class="d-flex align-items-center justify-content-between flex-wrap">
           

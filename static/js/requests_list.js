@@ -56,7 +56,132 @@ window.loadResultData = function(requestId) {
         document.getElementById('resultContent').innerHTML = `<p style="color: red;">Ошибка загрузки результатов: ${error.message}</p>`;
       });
   };
+
+
+
+// Словарь для хранения удалённых строк (mass delete)
+const removedRows = {};
+
+// Словарь для хранения старых статусов (mass status)
+const statusActions = {};
+
+
+// показываем кнопку «Отменить» внутри massUpdatePanel
+function showUndoInPanel(actionId) {
+    undoActive = true;                           // <<< включили блокировку выбора
+    $('#massUpdatePanel').collapse('show');
   
+    // спрячем дефолтные кнопки и сообщение
+    document.getElementById('massUpdateMessage').innerHTML = '';
+    document.getElementById('massUpdateButtons').innerHTML = '';
+    document.getElementById('massResetButton').style.display = 'none';
+    document.getElementById('massDeleteButton').style.display = 'none';
+  
+    // создаём Undo‑кнопку с таймером
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'btn btn-warning btn-sm';
+    let timer = 5;
+    undoBtn.textContent = `Отменить (${timer}s)`;
+    document.getElementById('massUpdateButtons').appendChild(undoBtn);
+  
+    const intervalId = setInterval(() => {
+        timer--;
+        if (timer === 0) {
+          clearInterval(intervalId);
+          undoActive = false;  // снимаем блокировку выбора бейджей
+      
+          // плавно сворачиваем панель и после её скрытия восстанавливаем кнопки и бейджи
+          $('#massUpdatePanel')
+            .collapse('hide')
+            .one('hidden.bs.collapse', function() {
+              // восстанавливаем дефолтные кнопки
+              document.getElementById('massResetButton').style.display = '';
+              document.getElementById('massDeleteButton').style.display = '';
+              // разблокируем бейджи
+              enableAllBadges();
+              // снимаем этот разовый обработчик
+              $(this).off('hidden.bs.collapse');
+            });
+        } else {
+          undoBtn.textContent = `Отменить (${timer}s)`; 
+        }
+      }, 1000);
+  
+    undoBtn.addEventListener('click', () => {
+      clearInterval(intervalId);
+      // плавно сворачиваем панель
+      $('#massUpdatePanel')
+        .collapse('hide')
+        .one('hidden.bs.collapse', function() {
+          // сбросим всё в дефолт
+          undoActive = false;                               // <<< снимаем блокировку
+          document.getElementById('massUpdateMessage').innerHTML = '';
+          document.getElementById('massUpdateButtons').innerHTML = '';
+          document.getElementById('massResetButton').style.display = '';
+          document.getElementById('massDeleteButton').style.display = '';
+          $(this).off('hidden.bs.collapse');
+        });
+      
+      // AJAX‑отмена на сервере
+      fetch(`/main_app/requests/undo/${actionId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.success) {
+            return alert(data.error);
+          }
+      
+          // 4a) Если были массовые удаления — восстанавливаем строки
+          if (removedRows[actionId]) {
+            const tbody = document.querySelector('tbody');
+            removedRows[actionId].forEach(({ html, rowIndex }) => {
+              const temp = document.createElement('tbody');
+              temp.innerHTML = html;
+              const newRow = temp.querySelector('tr');
+              // вставляем на своё место
+              const ref = tbody.children[rowIndex] || null;
+              tbody.insertBefore(newRow, ref);
+          
+              // --- Очищаем эффект "нажатости" ---
+              newRow.classList.remove('selected');
+              const badge = newRow.querySelector('.selectable-status');
+              if (badge) {
+                badge.classList.remove('active', 'no-hover');
+                // если нужно, можно ещё явно вернуть pointerEvents и opacity
+                badge.style.pointerEvents = '';
+                badge.style.opacity = '';
+              }
+            });
+            delete removedRows[actionId];
+          }
+          
+          
+      
+          // 4b) Если была массовая смена статуса — восстанавливаем бейджи
+          if (statusActions[actionId]) {
+            statusActions[actionId].forEach(({ id, oldStatus }) => {
+              const badge = document.querySelector(`.selectable-status[data-request-id="${id}"]`);
+              if (!badge) return;
+              badge.textContent = oldStatus;
+              badge.classList.remove('badge-success','badge-primary','badge-secondary');
+              if (oldStatus === 'Новая')        badge.classList.add('badge-success');
+              else if (oldStatus === 'В работе')  badge.classList.add('badge-primary');
+              else if (oldStatus === 'Выполнена') badge.classList.add('badge-secondary');
+            });
+            delete statusActions[actionId];
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Не удалось отменить действие');
+        });
+      });  
+  }
   
 
 // Функция для установки data-request-id во все формы загрузки в модальном окне
@@ -166,6 +291,7 @@ function setRequestIdInForms(requestId) {
 
     let selectedRequestIds = [];
     let selectedGroupStatus = null;
+    let undoActive = false;
 
     function disableOppositeBadges(selectedStatus) {
         document.querySelectorAll('.selectable-status').forEach(function(badge) {
@@ -249,9 +375,14 @@ function setRequestIdInForms(requestId) {
     }
     
     
-    // Функция для отправки AJAX-запроса на массовое обновление статуса
+// Функция для отправки AJAX-запроса на массовое обновление статуса
 function massUpdateStatusAjax(newStatus) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    // Схватим текущие статусы, чтобы потом восстановить
+    const oldStatuses = selectedRequestIds.map(id => {
+      const badge = document.querySelector(`.selectable-status[data-request-id="${id}"]`);
+      return { id, oldStatus: badge ? badge.textContent.trim() : null };
+    });
     fetch('/main_app/requests/mass_update_status/', {
         method: 'POST',
         headers: {
@@ -272,6 +403,7 @@ function massUpdateStatusAjax(newStatus) {
     })
     .then(data => {
         if (data.success) {
+            statusActions[data.action_id] = oldStatuses;
             // Обновляем отображение статуса в таблице
             selectedRequestIds.forEach(function(id) {
                 const badge = document.querySelector('.selectable-status[data-request-id="' + id + '"]');
@@ -301,7 +433,7 @@ function massUpdateStatusAjax(newStatus) {
             selectedRequestIds = [];
             selectedGroupStatus = null;
             enableAllBadges();
-            hideMassUpdatePanel();
+            showUndoInPanel(data.action_id);
         } else {
             alert('Ошибка обновления: ' + data.error);
         }
@@ -324,114 +456,62 @@ function massUpdateStatusAjax(newStatus) {
     }
 
     // При клике на бейдж статуса
-    document.querySelectorAll('.selectable-status').forEach(function(badge) {
-        badge.addEventListener('click', function(event) {
-            const requestId = badge.getAttribute('data-request-id');
-            const row = badge.closest('tr');
-            const rowStatus = badge.textContent.trim();
-    
-            if (!selectedGroupStatus) {
-                selectedGroupStatus = rowStatus;
-                disableOppositeBadges(selectedGroupStatus);
-                updateMassUpdatePanel(selectedGroupStatus);
-            }
-    
-            if (rowStatus !== selectedGroupStatus) {
-                return;
-            }
-    
-            if (row.classList.contains('selected')) {
-                row.classList.remove('selected');
-                selectedRequestIds = selectedRequestIds.filter(id => id !== requestId);
-                badge.classList.remove('active');
-                badge.classList.add('no-hover');
-                setTimeout(function() {
-                    badge.classList.remove('no-hover');
-                }, 300);
-                if (selectedRequestIds.length === 0) {
-                    selectedGroupStatus = null;
-                    enableAllBadges();
-                    hideMassUpdatePanel();
-                }
-            } else {
-                row.classList.add('selected');
-                selectedRequestIds.push(requestId);
-                badge.classList.add('active');
-            }
-    
-            if (selectedRequestIds.length > 0) {
-                showMassUpdatePanel();
-                updateMassUpdatePanel(selectedGroupStatus);
-            } else {
+// При клике на бейдж статуса
+document.querySelectorAll('.selectable-status').forEach(function(badge) {
+    badge.addEventListener('click', function(event) {
+        // 0) Если сейчас активен Undo — ничего не делаем
+        if (undoActive) return;
+
+        const requestId = badge.getAttribute('data-request-id');
+        const row = badge.closest('tr');
+        const rowStatus = badge.textContent.trim();
+
+        // 1) Если ещё не задана группа — начинаем выбор
+        if (!selectedGroupStatus) {
+            selectedGroupStatus = rowStatus;
+            disableOppositeBadges(selectedGroupStatus);
+            updateMassUpdatePanel(selectedGroupStatus);
+        }
+
+        // 2) Если кликнули по статусу не из текущей группы — игнорируем
+        if (rowStatus !== selectedGroupStatus) {
+            return;
+        }
+
+        // 3) Переключаем выделение этой строки
+        if (row.classList.contains('selected')) {
+            row.classList.remove('selected');
+            selectedRequestIds = selectedRequestIds.filter(id => id !== requestId);
+            badge.classList.remove('active');
+            badge.classList.add('no-hover');
+            setTimeout(() => badge.classList.remove('no-hover'), 300);
+
+            // Если больше ничего не выделено — сбрасываем всё
+            if (selectedRequestIds.length === 0) {
+                selectedGroupStatus = null;
+                enableAllBadges();
                 hideMassUpdatePanel();
             }
-        });
+        } else {
+            row.classList.add('selected');
+            selectedRequestIds.push(requestId);
+            badge.classList.add('active');
+        }
+
+        // 4) Показываем или скрываем панель в зависимости от наличия выделений
+        if (selectedRequestIds.length > 0) {
+            showMassUpdatePanel();
+            updateMassUpdatePanel(selectedGroupStatus);
+        } else {
+            hideMassUpdatePanel();
+        }
     });
+});
+
     
     
 
-    // Обработчик кнопки "Обновить статус"
-    const massUpdateButton = document.getElementById('massUpdateButton');
-    if (massUpdateButton) {
-        massUpdateButton.addEventListener('click', function(event) {
-            const newStatus = massUpdateButton.getAttribute('data-new-status');
-            if (!newStatus) {
-                alert('Невозможно определить новый статус.');
-                return;
-            }
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            fetch('/main_app/requests/mass_update_status/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    request_ids: selectedRequestIds,
-                    new_status: newStatus
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Ошибка обновления статуса');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    selectedRequestIds.forEach(function(id) {
-                        const badge = document.querySelector('.selectable-status[data-request-id="' + id + '"]');
-                        if (badge) {
-                            if (newStatus === 'Выполнена') {
-                                badge.textContent = 'Выполнена';
-                                badge.classList.remove('badge-success');
-                                badge.classList.add('badge-secondary');
-                            } else if (newStatus === 'В работе') {
-                                badge.textContent = 'В работе';
-                                badge.classList.remove('badge-secondary');
-                                badge.classList.add('badge-success');
-                            }
-                            // Получаем строку через .closest('tr')
-                            const row = badge.closest('tr');
-                            row.classList.remove('selected');
-                        }
-                    });
-                    // Сброс
-                    selectedRequestIds = [];
-                    selectedGroupStatus = null;
-                    enableAllBadges();
-                    hideMassUpdatePanel();
-                } else {
-                    alert('Ошибка обновления: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error(error);
-                alert('Произошла ошибка при обновлении статуса.');
-            });
-        });
-    }
+ 
 
     // Обработчик кнопки "Сбросить выбор"
     const massResetButton = document.getElementById('massResetButton');
@@ -499,14 +579,25 @@ function massUpdateStatusAjax(newStatus) {
                     })
                     .then(data => {
                         if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Заявки удалены',
-                                showConfirmButton: false,
-                                timer: 1500
-                            }).then(() => {
-                                location.reload();
-                            });
+                          // 1) Собираем удаляемые строки в память
+                          removedRows[data.action_id] = selectedRequestIds.map(id => {
+                            const row   = document.querySelector(`.selectable-status[data-request-id="${id}"]`).closest('tr');
+                            const html  = row.outerHTML;
+                            const tbody = row.parentNode;
+                            // запоминаем индекс строки внутри <tbody>
+                            const rowIndex = Array.prototype.indexOf.call(tbody.children, row);
+                            row.remove();
+                            return { id, html, rowIndex };
+                          });
+                          
+                      
+                          // 2) Сбрасываем текущее выделение
+                          selectedRequestIds = [];
+                          selectedGroupStatus = null;
+                          enableAllBadges();
+                      
+                          // 3) Показываем Undo‑кнопку
+                          showUndoInPanel(data.action_id);
                         } else {
                             Swal.fire({
                                 icon: 'error',
