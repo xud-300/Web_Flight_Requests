@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     .catch(error => console.error('Ошибка при загрузке названий объектов:', error));
             }
     
-            // Если выбран тип "Городок" (object_type == "4"), отключаем поля пикетов; иначе, включаем их
+            // Если выбран тип "Городок" (object_type == "4")
             if (selectedValue === "4") {
                 if (piketFrom) {
                     piketFrom.disabled = true;
@@ -163,10 +163,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (piketContainer) {
                     const errorDiv = document.createElement('div');
                     errorDiv.className = 'invalid-feedback d-block';
-                    // Выравниваем текст справа
                     errorDiv.style.textAlign = 'left';
                     errorDiv.innerHTML = errors[fieldName].join('<br>');
-                    // Добавляем ошибку после блока с полями (но в пределах контейнера)
                     piketContainer.appendChild(errorDiv);
                 }
                 continue;
@@ -200,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const createRequestForm = document.getElementById('createRequestForm');
     if (createRequestForm) {
         createRequestForm.addEventListener('submit', function(event) {
-            event.preventDefault(); // Отменяем стандартную отправку формы
+            event.preventDefault();
             const formData = new FormData(createRequestForm);
             fetch(createRequestForm.action, {
                 method: 'POST',
@@ -226,7 +224,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         location.reload();
                     });
                 } else {
-                    // Обновляем форму: подсвечиваем поля с ошибками и выводим сообщения под ними
+                    if (data.errors.__all__) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Ошибка',
+                            html: data.errors.__all__.join('<br>'),
+                            confirmButtonText: 'ОК'
+                        });
+                        delete data.errors.__all__;
+                    }
                     updateFormErrors(createRequestForm, data.errors);
                 }
             })
@@ -240,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // --- Шаг 2: Обработчик "input" для очистки ошибок при вводе ---
+        // Обработчик "input" для очистки ошибок при вводе
         const formElements = createRequestForm.querySelectorAll('input, textarea, select');
         formElements.forEach(element => {
             element.addEventListener('input', function() {
@@ -252,12 +258,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // --- Шаг 3: Обработчик для кнопки "Отменить" ---
+        // Обработчик для кнопки "Отменить"
         function clearFormErrors(form) {
             const errorElements = form.querySelectorAll('.invalid-feedback');
             errorElements.forEach(el => el.remove());
             const invalidFields = form.querySelectorAll('.is-invalid');
             invalidFields.forEach(el => el.classList.remove('is-invalid'));
+            const piketErrorSpace = document.getElementById('piketErrorSpace');
+            if (piketErrorSpace) piketErrorSpace.innerHTML = '';
         }
 
         const cancelBtn = document.getElementById('cancelCreateBtn');

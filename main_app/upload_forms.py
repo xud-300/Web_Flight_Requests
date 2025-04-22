@@ -13,7 +13,6 @@ def validate_file_extension(value, allowed_extensions):
         )
 
 class OrthoUploadForm(forms.Form):
-    # Поле называется orthoFile, чтобы совпадало с HTML: name="orthoFile"
     orthoFile = forms.FileField(label="Выберите файл для ортофотоплана")
 
     def clean_orthoFile(self):
@@ -49,10 +48,8 @@ class MultiFileInput(ClearableFileInput):
     allow_multiple_selected = True
 
 class OverviewUploadForm(forms.Form):
-    # Поле называется overviewFiles для соответствия HTML-разметке.
-    # Используем стандартный виджет, который принимает только один файл.
     overviewFiles = forms.FileField(
-        widget=forms.ClearableFileInput(),  # Однофайловый input
+        widget=forms.ClearableFileInput(),
         label="Выберите архив"
     )
 

@@ -1,21 +1,21 @@
 /*************************************************************
- * 1. Правила валидации для каждого типа загрузки:
+ * Правила валидации для каждого типа загрузки:
  *    (расширения, максимальный размер в МБ, максимальное кол-во файлов)
  *************************************************************/
 const validationRules = {
     // Ортофотоплан
     ortho: {
       allowedExtensions: ['dwg', 'dxf', 'tif', 'zip', 'rar', '7z', 'sit'],
-      maxSizeMB: 5120,  // 5 ГБ = 5120 МБ
+      maxSizeMB: 5120,  // 5 ГБ 
       maxFiles: 1
     },
     // Лазерное сканирование
     laser: {
       allowedExtensions: ['dwg', 'dxf', 'las', 'zip', 'rar', '7z', 'sit'],
-      maxSizeMB: 15360, // 15 ГБ = 15360 МБ
+      maxSizeMB: 15360, // 15 ГБ 
       maxFiles: 1
     },
-    // Панорама (файлы не ожидаются)
+    // Панорама 
     panorama: {
       allowedExtensions: [],
       maxSizeMB: 0,
@@ -24,7 +24,7 @@ const validationRules = {
     // Обзорные фото
     overview: {
       allowedExtensions: ['zip', 'rar', '7z', 'sit'],
-      maxSizeMB: 2048, // 2 ГБ = 2048 МБ
+      maxSizeMB: 2048, // 2 ГБ
       maxFiles: 1
     }
   };
@@ -63,7 +63,7 @@ const validationRules = {
   }
   
   /*************************************************************
-   * 2. Функция для Drag-and-Drop 
+   *  Функция для Drag-and-Drop 
    *************************************************************/
   document.querySelectorAll(".drop-zone").forEach(dropZoneElement => {
     const inputElement = dropZoneElement.querySelector(".drop-zone__input");
@@ -124,7 +124,6 @@ const validationRules = {
   function updateDropZonePrompt(dropZoneElement, file) {
     const prompt = dropZoneElement.querySelector(".drop-zone__prompt");
     prompt.textContent = file ? `Файл выбран: ${file.name}` : "Перетащите сюда файл или кликните для выбора";
-    // Убираем любые манипуляции с кнопками здесь!
   }
   
   
@@ -153,7 +152,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
   /*************************************************************
-   * 3. Функция uploadTempFileWithProgress — загрузка файла во временное хранилище с прогресс-баром
+   *  Функция uploadTempFileWithProgress — загрузка файла во временное хранилище с прогресс-баром
    *************************************************************/
   function uploadTempFileWithProgress(form, uploadType) {
     var xhr = new XMLHttpRequest();
@@ -260,7 +259,7 @@ document.addEventListener("DOMContentLoaded", function() {
   
 
   /*************************************************************
-   * 4. Обработчик кнопки "Загрузить" (триггер) для показа/скрытия секции загрузки
+   * Обработчик кнопки "Загрузить" (триггер) для показа/скрытия секции загрузки
    *************************************************************/
   $('.uploadBtn').on('click', function() {
     var type = $(this).data('type');
@@ -269,7 +268,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   
 /*************************************************************
- * 6. Обработчик отправки формы — подтверждение сохранения файла
+ * Обработчик отправки формы — подтверждение сохранения файла
  *************************************************************/
 ['ortho', 'laser', 'panorama', 'overview'].forEach(function(type) {
   var form = document.getElementById(type + "UploadForm");
@@ -330,7 +329,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       }
       
-      // Стандартная логика — получаем временный идентификатор файла (tempId)
+      // Стандартная логика — получаем временный идентификатор файла
       var tempId = form.dataset.tempId;
       console.log("Форма для типа:", type);
       console.log("Получен requestId:", requestId);
@@ -509,7 +508,7 @@ function confirmTempFile(tempId, requestId, customViewLink) {
 
 
   /*************************************************************
-   * 7. Обработчик кнопки "Отмена" — отмена загрузки и очистка формы
+   * Обработчик кнопки "Отмена" — отмена загрузки и очистка формы
    *************************************************************/
 // Функция для скрытия контейнера кнопок и сброса прогресс-бара
 function hideUploadControls(form) {
@@ -610,7 +609,7 @@ document.querySelectorAll('.cancelUploadBtn').forEach(function(btn) {
         if (!data.success) {
           throw new Error(data.error || 'Неизвестная ошибка при удалении временного файла');
         }
-        return data; // возвращаем { success: true, message: ... }
+        return data;
       });
     }
   
@@ -672,17 +671,13 @@ $('#resultModal').on('hidden.bs.modal', function () {
 });
 
 
-/*************************************************************
- * Функция userIsAdmin
- * Определяет, является ли текущий пользователь администратором.
- * Для проверки используется data-атрибут <body data-user-role="admin">.
- *************************************************************/
+// Определяет роль пользователя
 function userIsAdmin() {
   return document.body.getAttribute('data-user-role') === 'admin';
 }
 
 /*************************************************************
- * 8. Функция populateResultModal — заполнение модального окна результатами
+ * Функция populateResultModal — заполнение модального окна результатами
  *************************************************************/
 function populateResultModal(data) {
   try {
@@ -923,7 +918,6 @@ function populateResultModal(data) {
               if (overviewDeleteContainer) { overviewDeleteContainer.innerHTML = ''; }
             }
             
-            // ********** Новое: Отключаем форму загрузки для Overview **********
             var overviewUploadForm = document.getElementById('overviewUploadForm');
             if (overviewUploadForm) {
               // Отключаем все input-элементы формы
@@ -936,7 +930,6 @@ function populateResultModal(data) {
             if (overviewDropZone) {
               overviewDropZone.classList.add("drop-zone--disabled");
             }
-            // *******************************************************************
             
           } else {
             // Если файла нет – сбрасываем ссылку и очищаем контейнер удаления
@@ -960,7 +953,7 @@ function populateResultModal(data) {
 
 
 /*************************************************************
- * 9. Функция удаления результатов съемки
+ * Функция удаления результатов съемки
  *************************************************************/
 //При клике происходит подтверждение действия, и вызывается функция deleteFile().
 document.addEventListener("click", function(event) {
@@ -969,7 +962,7 @@ document.addEventListener("click", function(event) {
   if (deleteEl) {
     // Считываем data-атрибуты из найденного элемента
     var fileId = deleteEl.getAttribute("data-file-id");
-    var type = deleteEl.getAttribute("data-type"); // например, "ortho", "laser", "laser_view", "panorama"
+    var type = deleteEl.getAttribute("data-type"); 
     if (confirm("Вы действительно хотите удалить этот элемент?")) {
       deleteFile(fileId, type);
     }

@@ -7,7 +7,7 @@ class ObjectType(models.Model):
 
     class Meta:
         db_table = 'object_types'
-        managed = False  # уже существует в БД
+        managed = False
 
     def __str__(self):
         return self.type_name
@@ -99,9 +99,9 @@ class FlightRequest(models.Model):
 
 from django.db import models
 from django.contrib.auth.models import User as AuthUser
-from main_app.models import FlightRequest, ObjectType, Object  # <-- Импорт моделей, где лежат object_type, object_name
+from main_app.models import FlightRequest, ObjectType, Object
 import json
-# Новая модель для истории изменений
+# Модель для истории изменений
 class RequestHistory(models.Model):
     id = models.AutoField(primary_key=True)
     flight_request = models.ForeignKey(
@@ -138,7 +138,6 @@ class RequestHistory(models.Model):
         "overview": "Обзорные фото",
         "note": "Примечание",
         "status": "Статус заявки",
-        # Если есть ещё поля — добавьте сюда
     }
 
     def get_parsed_changes(self):
@@ -179,7 +178,6 @@ class RequestHistory(models.Model):
                 old_val = self._lookup_object_name(old_val)
                 new_val = self._lookup_object_name(new_val)
 
-            # Можно добавить логику для других полей (например, status: "В работе" -> "В процессе" и т.д.)
 
             result.append((label, old_val, new_val))
 
@@ -218,7 +216,6 @@ class FlightResultFile(models.Model):
     file = models.FileField(upload_to='flight_results/', blank=True, null=True)
     # Для тех, где вводится ссылка для просмотра:
     view_link = models.URLField(blank=True, null=True)
-    # Размер файла (если нужно)
     file_size = models.PositiveBigIntegerField(blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

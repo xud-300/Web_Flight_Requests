@@ -15,9 +15,8 @@
 {% block title %}Intix Fly{% endblock %}
 
 {% block content %}
-<!-- Заголовок и кнопка создания заявки -->
+
 <div class="container my-4">
-<!-- Заголовок и кнопка создания заявки -->
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h2 mb-0" style="font-weight: 600;">Список заявок</h1>
   <button id="createRequestBtn" class="btn btn-create">
@@ -27,7 +26,6 @@
 </div>
 
 
-<!-- Кнопки Фильтрация, Сортировка, Экспорт -->
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <!-- Кнопка Фильтрация -->
@@ -57,7 +55,7 @@
 </div>
 
 
-<!-- Фильтрация и Сортировка (collapse) -->
+<!-- Фильтрация и Сортировка -->
 <div class="row">
   <div class="col-12">
     <!-- Панель фильтров -->
@@ -126,7 +124,6 @@
             <input type="hidden" id="shoot_date_to" name="shoot_date_to" value="{{ request.GET.shoot_date_to }}">
           </div>
 
-          <!-- Кнопки "Применить" и "Сбросить" -->
           <div class="col-auto mb-2">
             <button type="submit" class="btn btn-primary">
               <i class="fas fa-check mr-1"></i> Применить
@@ -143,7 +140,6 @@
     <div class="collapse {% if request.GET.sort or request.GET.order %}show{% endif %}" id="sortPanel">
       <div class="card card-body">
         <form id="sortForm" class="form-inline" method="get">
-          <!-- Скрытые поля для сохранения текущих фильтров (если есть) -->
           <input type="hidden" name="status" value="{{ request.GET.status }}">
           <input type="hidden" name="object_type" value="{{ request.GET.object_type }}">
           <input type="hidden" name="object_name" value="{{ request.GET.object_name }}">
@@ -182,31 +178,18 @@
     {% if user.is_staff %}
     <!-- Панель массового обновления -->
     <div id="massUpdatePanel" class="collapse">
-      <!-- Маргин теперь внутри, и он будет анимироваться вместе с высотой -->
       <div class="card card-body py-2 my-3">
-        <!-- Общий контейнер: сообщение слева, кнопки справа -->
-        <div class="d-flex align-items-center justify-content-between flex-wrap">
-          
-          <!-- Сообщение, где укажем статус и (опционально) количество заявок -->
-          <p id="massUpdateMessage" class="mb-0 mr-3" style="font-weight: 500;"></p>
-          
-          <!-- Блок кнопок справа -->
-          <div class="d-flex align-items-center flex-wrap">
-            
-            <!-- Динамические кнопки для перевода статуса -->
-            <div id="massUpdateButtons" class="mr-2"></div>
-            
-            <!-- Кнопка "Сбросить выбор" -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap">          
+          <p id="massUpdateMessage" class="mb-0 mr-3" style="font-weight: 500;"></p>          
+          <div class="d-flex align-items-center flex-wrap">           
+            <div id="massUpdateButtons" class="mr-2"></div>            
             <button id="massResetButton" class="btn btn-outline-secondary btn-sm mr-2">
               <i class="fas fa-undo-alt"></i> Сбросить выбор
-            </button>
-            
-            <!-- Кнопка "Удалить заявку(и)" -->
+            </button>          
             <button id="massDeleteButton" class="btn btn-outline-danger btn-sm">
               <i class="fas fa-trash"></i> Удалить
             </button>
-          </div>
-          
+          </div>          
         </div>
       </div>
     </div>
@@ -216,8 +199,6 @@
    
   </div>
 </div>
-
-
 
       <!-- Таблица заявок -->
     <div class="table-responsive">
@@ -229,14 +210,11 @@
                             Статус
                             {% if request.GET.sort == 'status' %}
                                 {% if request.GET.order == 'asc' %}
-                                    <!-- Отсортировано по возрастанию -->
                                     <i class="fas fa-sort-up sort-icon"></i>
                                 {% else %}
-                                    <!-- Отсортировано по убыванию -->
                                     <i class="fas fa-sort-down sort-icon"></i>
                                 {% endif %}
                             {% else %}
-                                <!-- Не отсортировано: показываем fa-sort, но скрываем до hover (через CSS) -->
                                 <i class="fas fa-sort sort-icon default-sort-icon"></i>
                             {% endif %}
                         </a>
@@ -306,9 +284,6 @@
                       {% else %}
                         {{ request.status }}
                       {% endif %}
-                    
-                  
-                      <!-- Элемент для галочки, по умолчанию скрыт -->
                       <span class="selected-icon" style="display: none;">
                         <i class="fas fa-check"></i>
                       </span>
@@ -430,7 +405,6 @@
   
 </div>
 
-<!-- Включаем модальные окна для создания и редактирования заявок -->
 {% include "main_app/modal_create.html" %}
 {% include "main_app/modal_edit.html" %}
 {% include "main_app/modal_result.html" %}

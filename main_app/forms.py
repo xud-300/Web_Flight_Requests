@@ -116,10 +116,7 @@ class FlightRequestCreateForm(forms.ModelForm):
                 if piket_from == 0 and piket_to == 0:
                     piket_errors.append('Оба поля "Пикет от" и "Пикет до" не могут одновременно равняться нулю.')
 
-        # Если в итоге есть какие-то ошибки по пикетам:
         if piket_errors:
-            # Привязываем их к None => Django запишет их как __all__
-            # Соединяем в один текст через <br> (или '\n')
             self.add_error(None, '<br>'.join(piket_errors))
 
 
@@ -140,6 +137,27 @@ class FlightRequestCreateForm(forms.ModelForm):
         if not (orthophoto or laser or panorama or overview):
             error_msg = 'Пожалуйста, выберите хотя бы один тип съемки.'
             self.add_error('overview', error_msg)
+
+        
+        # 8. Проверка на дубликат заявки 
+        if (object_type and object_name
+            and piket_from is not None and piket_to is not None
+            and shoot_date_from and shoot_date_to):
+            from .models import FlightRequest
+            duplicate = FlightRequest.objects.filter(
+                object_type=object_type,
+                object_name=object_name,
+                piket_from=piket_from,
+                piket_to=piket_to,
+                shoot_date_from=shoot_date_from,
+                shoot_date_to=shoot_date_to
+            ).exists()
+            if duplicate:
+                # добавляем неполевую ошибку, она попадёт в __all__
+                self.add_error(
+                    None,
+                    'Заявка с такими параметрами уже существует.'
+                )
 
         return cleaned_data
 
@@ -282,6 +300,21 @@ class FlightRequestEditForm(forms.ModelForm):
             self.add_error('overview', error_msg)
 
 
+        # 8. Проверка на дубликат при редактировании (исключаем текущую запись)
+        from .models import FlightRequest
+        duplicate_qs = FlightRequest.objects.filter(
+            object_type=object_type,
+            object_name=object_name,
+            piket_from=piket_from,
+            piket_to=piket_to,
+            shoot_date_from=shoot_date_from,
+            shoot_date_to=shoot_date_to
+        ).exclude(pk=self.instance.pk)
+        if duplicate_qs.exists():
+            self.add_error(
+                None,
+                'Заявка с такими параметрами уже существует.'
+            )
 
         return cleaned_data
 

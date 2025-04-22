@@ -1,4 +1,3 @@
-# main_app/views.py
 import json
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, View
@@ -46,7 +45,6 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
             qs = qs.filter(object_name_id=object_name)
         
         if shooting_type:
-            # Предполагаем, что shooting_type соответствует имени булевого поля (например, 'laser')
             filter_kwargs = {shooting_type: True}
             qs = qs.filter(**filter_kwargs)
         
@@ -61,7 +59,7 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
         
         # Сортировка: получаем GET-параметры сортировки
         sort_field = self.request.GET.get('sort')
-        order = self.request.GET.get('order', 'asc')  # по умолчанию 'asc'
+        order = self.request.GET.get('order', 'asc')
         
         if sort_field == 'shoot_date':
             if order == 'desc':
@@ -81,7 +79,7 @@ class FlightRequestListView(LoginRequiredMixin, ListView):
                 else:
                     qs = qs.order_by(field_name)
             else:
-                qs = qs.order_by('created_at')
+                qs = qs.order_by('-id')
         
         return qs
 
@@ -109,7 +107,7 @@ class FlightRequestCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('requests_list')
 
     def form_valid(self, form):
-        # Попытка получить объект пользователя через TelegramUser
+        # Привязываем пользователя из TelegramUser или создаем нового
         try:
             user_obj = TelegramUser.objects.get(id=self.request.user.id)
         except TelegramUser.DoesNotExist:
@@ -120,29 +118,26 @@ class FlightRequestCreateView(LoginRequiredMixin, CreateView):
                 full_name=getattr(self.request.user, 'full_name', '')
             )
         form.instance.user = user_obj
-        # Используем полное имя из профиля для отображения создателя
         form.instance.username = self.request.user.profile.full_name
-        self.object = form.save()
 
-        # Используем встроенную модель пользователя (AuthUser) напрямую: self.request.user
+        # Сохраняем сам запрос и историю
+        self.object = form.save()
         RequestHistory.objects.create(
             flight_request=self.object,
             changed_by=self.request.user,
             changes=json.dumps({"created": ["", "Заявка создана"]}, ensure_ascii=False)
         )
 
+        # Если AJAX — вернем JSON, иначе стандартный redirect
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
-        else:
-            return super().form_valid(form)
-
-
+            return JsonResponse({'success': True, 'redirect_url': str(self.success_url)})
+        return super().form_valid(form)
 
     def form_invalid(self, form):
+        # При AJAX — возвращаем JSON со всеми ошибками (полевыми и неполевыми)
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'errors': form.errors})
-        else:
-            return super().form_invalid(form)
+        return super().form_invalid(form)
 
 
 # Редактирование заявки через модальное окно.
@@ -154,9 +149,8 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
-        # Проверяем, является ли пользователь администратором через is_staff или через профиль
+        # только админы или автор могут редактировать
         if not (request.user.is_staff or (hasattr(request.user, 'profile') and request.user.profile.role == 'admin')):
-            # Если пользователь не администратор, то он может редактировать только свою заявку
             if self.object.user_id != request.user.id:
                 return HttpResponseForbidden("У вас нет прав для редактирования этой заявки.")
         return super().dispatch(request, *args, **kwargs)
@@ -166,14 +160,17 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
         context['object_types'] = ObjectType.objects.all()
         context['object_names'] = Object.objects.filter(object_type=self.object.object_type)
         context['edit_url'] = reverse_lazy('request_edit', args=[self.object.id])
-        # Вычисляем флаг редактируемости:
-        # Если статус заявки "завершена" и пользователь не администратор, то редактирование запрещено.
-        context['is_editable'] = (self.object.status != "Выполнена") or (self.request.user.is_staff or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin'))
+        context['is_editable'] = (
+            self.object.status != "Выполнена"
+            or self.request.user.is_staff
+            or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin')
+        )
         return context
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         context = self.get_context_data(object=self.object, form=self.get_form())
+        # при AJAX запросе возвращаем только тело модалки
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('ajax'):
             html = render_to_string("main_app/modal_edit.html", {**context, 'ajax': True}, request=request)
             return HttpResponse(html)
@@ -181,44 +178,41 @@ class FlightRequestUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        # Добавляем поле 'status' только для администраторов (через is_staff или профиль)
+        # для админа показываем выбор статуса
         if self.request.user.is_staff or (hasattr(self.request.user, 'profile') and self.request.user.profile.role == 'admin'):
             form.fields['status'] = forms.ChoiceField(
-                choices=[('Новая', 'Новая'), ('В работе', 'В работе'), ('Выполнена', 'Выполнена')],
+                choices=[('Новая','Новая'),('В работе','В работе'),('Выполнена','Выполнена')],
                 initial=self.object.status,
-                widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_edit_status'})
+                widget=forms.Select(attrs={'class':'form-control','id':'id_edit_status'})
             )
         return form
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        
-        # Формируем словарь изменений, используя form.changed_data
-        changes_dict = {}
+        # сохраняем историю изменений
+        changes = {}
         for field in form.changed_data:
-            old_value = form.initial.get(field)
-            new_value = form.cleaned_data.get(field)
-            changes_dict[field] = [str(old_value), str(new_value)]
-        
-        # Используем self.request.user напрямую (это встроенная модель, связанная с accounts.Profile)
+            old = form.initial.get(field)
+            new = form.cleaned_data.get(field)
+            changes[field] = [str(old), str(new)]
         RequestHistory.objects.create(
             flight_request=self.object,
             changed_by=self.request.user,
-            changes=json.dumps(changes_dict, ensure_ascii=False)
+            changes=json.dumps(changes, ensure_ascii=False)
         )
-        
+        # если AJAX — отдаём JSON
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'redirect_url': reverse_lazy('requests_list')})
-        else:
-            return response
-
-
+            return JsonResponse({
+                'success': True,
+                'redirect_url': str(self.success_url)
+            })
+        return response
 
     def form_invalid(self, form):
+        # при AJAX — возвращаем ошибки
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'errors': form.errors})
-        else:
-            return super().form_invalid(form)
+        return super().form_invalid(form)
 
 
 
@@ -249,11 +243,11 @@ def mass_update_status(request):
         if not request_ids or new_status not in ['Новая', 'В работе', 'Выполнена']:
             return JsonResponse({'success': False, 'error': 'Неверные параметры'})
 
-        # 1) Получаем старые статусы для «Undo»
+        # Получаем старые статусы для «Undo»
         qs = FlightRequest.objects.filter(id__in=request_ids)
         old_statuses = {str(fr.id): fr.status for fr in qs}
 
-        # 2) Создаём запись UndoAction
+        # Создаём запись UndoAction
         undo = UndoAction.objects.create(
             user=request.user,
             action_type='mass_status',
@@ -263,7 +257,7 @@ def mass_update_status(request):
             }
         )
 
-        # 3) Сама массовая смена статуса + история
+        # Сама массовая смена статуса + история
         for fr in qs:
             old = fr.status
             fr.status = new_status
@@ -274,11 +268,18 @@ def mass_update_status(request):
                 changes=json.dumps({'status': [old, new_status]}, ensure_ascii=False)
             )
 
-        # 4) Возвращаем action_id для последующей отмены
+        # Возвращаем action_id для последующей отмены
         return JsonResponse({'success': True, 'action_id': undo.id})
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+import os
+import uuid
+from django.conf import settings
+from django.core.files.storage import default_storage
+# Папка «корзины» для временного хранения файлов
+TRASH_DIR = os.path.join(settings.MEDIA_ROOT, 'flight_results', '.trash')
 
 # AJAX-обработчик для массового удаления заявок.
 @require_POST
@@ -286,16 +287,49 @@ def mass_update_status(request):
 def mass_delete_requests(request):
     if not request.user.is_staff:
         return HttpResponseForbidden("Доступ запрещен")
+
     try:
         data = json.loads(request.body)
         request_ids = data.get('request_ids', [])
         if not request_ids:
             return JsonResponse({'success': False, 'error': 'Нет заявок для удаления'})
 
-        # 1) Собираем полные данные заявок для восстановления
-        qs = FlightRequest.objects.filter(id__in=request_ids)
+        # Получаем заявки вместе с их файлами
+        qs = FlightRequest.objects.filter(id__in=request_ids).prefetch_related('result_files')
+
         requests_data = []
         for fr in qs:
+            files_data = []
+            for rf in fr.result_files.all():
+                file_name = rf.file.name if rf.file else None
+                view_link = rf.view_link
+                file_size = rf.file_size
+
+                file_entry = {
+                    'id': rf.id,
+                    'result_type': rf.result_type,
+                    'file_name': file_name,
+                    'view_link': view_link,
+                    'file_size': file_size,
+                }
+
+                # Перемещаем сам файл в "корзину"
+                if file_name:
+                    orig_path = file_name
+                    trash_subdir = os.path.join(TRASH_DIR, str(uuid.uuid4()))
+                    trash_path = os.path.join(trash_subdir, os.path.basename(orig_path))
+
+                    # Копируем файл в корзину
+                    with default_storage.open(orig_path, 'rb') as src:
+                        default_storage.save(trash_path, src)
+                    # Удаляем оригинал
+                    default_storage.delete(orig_path)
+
+                    file_entry['trash_path'] = trash_path
+
+                files_data.append(file_entry)
+
+            # Собираем данные по самой заявке
             requests_data.append({
                 'id': fr.id,
                 'user_id': fr.user_id,
@@ -314,19 +348,19 @@ def mass_delete_requests(request):
                 'overview': fr.overview,
                 'object_type_id': fr.object_type_id,
                 'object_name_id': fr.object_name_id,
+                'result_files': files_data,
             })
 
-        # 2) Создаём UndoAction
+        # Создаём запись для Undo
         undo = UndoAction.objects.create(
             user=request.user,
             action_type='mass_delete',
             payload={'requests': requests_data}
         )
 
-        # 3) Удаляем сами заявки (и каскадно всё остальное)
+        # Фактическое удаление заявок и связанных файлов
         qs.delete()
 
-        # 4) Отправляем назад action_id для кнопки «Отменить»
         return JsonResponse({'success': True, 'action_id': undo.id})
 
     except Exception as e:
@@ -336,49 +370,82 @@ def mass_delete_requests(request):
 @require_POST
 @login_required
 def undo_action(request, action_id):
-    # 1) Получаем UndoAction и проверяем, что это тот же пользователь
+    # Получаем UndoAction и проверяем пользователя
     try:
         action = UndoAction.objects.get(pk=action_id, user=request.user)
     except UndoAction.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Действие не найдено'})
 
-    # 2) Проверяем, не вышло ли время (5 секунд)
+    # Проверяем время отката (5 секунд)
     if (timezone.now() - action.created_at).total_seconds() > 5:
         action.delete()
         return JsonResponse({'success': False, 'error': 'Время для отмены истекло'})
 
-    # 3) В зависимости от типа выполняем обратную логику
     payload = action.payload
+
     if action.action_type == 'mass_status':
         # Восстанавливаем старые статусы
         for req_id, old_status in payload.get('old_statuses', {}).items():
             FlightRequest.objects.filter(id=int(req_id)).update(status=old_status)
+
     elif action.action_type == 'mass_delete':
-        # Восстанавливаем удалённые заявки
-        for data in payload.get('requests', []):
-            FlightRequest.objects.create(
-                id=data['id'],
-                user_id=data['user_id'],
-                username=data['username'],
-                piket_from=data['piket_from'],
-                piket_to=data['piket_to'],
-                shoot_date_from=data['shoot_date_from'],
-                shoot_date_to=data['shoot_date_to'],
-                note=data['note'],
-                kml_file_id=data['kml_file_id'],
-                status=data['status'],
-                created_at=parse_datetime(data['created_at']),
-                orthophoto=data['orthophoto'],
-                laser=data['laser'],
-                panorama=data['panorama'],
-                overview=data['overview'],
-                object_type_id=data['object_type_id'],
-                object_name_id=data['object_name_id'],
+        # Восстанавливаем удалённые заявки и их файлы
+        for req_data in payload.get('requests', []):
+            # 1) Восстанавливаем саму заявку
+            fr = FlightRequest.objects.create(
+                id=req_data['id'],
+                user_id=req_data['user_id'],
+                username=req_data['username'],
+                piket_from=req_data['piket_from'],
+                piket_to=req_data['piket_to'],
+                shoot_date_from=(parse_datetime(req_data['shoot_date_from'])
+                                  if req_data['shoot_date_from'] else None),
+                shoot_date_to=(parse_datetime(req_data['shoot_date_to'])
+                                if req_data['shoot_date_to'] else None),
+                note=req_data['note'],
+                kml_file_id=req_data['kml_file_id'],
+                status=req_data['status'],
+                created_at=parse_datetime(req_data['created_at']),
+                orthophoto=req_data['orthophoto'],
+                laser=req_data['laser'],
+                panorama=req_data['panorama'],
+                overview=req_data['overview'],
+                object_type_id=req_data['object_type_id'],
+                object_name_id=req_data['object_name_id'],
             )
+
+            # 2) Восстанавливаем все связанные файлы
+            for f in req_data.get('result_files', []):
+                original_name = f.get('file_name')
+                trash_path    = f.get('trash_path')
+                view_link     = f.get('view_link')
+                file_size     = f.get('file_size')
+                file_field    = None
+
+                # Если файл был на диске — копируем из корзины или из оригинального места
+                src_path = trash_path or original_name
+                if src_path:
+                    # Читаем содержимое
+                    with default_storage.open(src_path, 'rb') as src:
+                        # Сохраняем обратно в flight_results/
+                        file_field = default_storage.save(original_name, src)
+                    # Удаляем временный файл из корзины
+                    if trash_path:
+                        default_storage.delete(trash_path)
+
+                # Создаём запись в БД
+                FlightResultFile.objects.create(
+                    flight_request=fr,
+                    result_type=f['result_type'],
+                    file=file_field,
+                    view_link=view_link,
+                    file_size=file_size,
+                )
+
     else:
         return JsonResponse({'success': False, 'error': 'Неподдерживаемый тип действия'})
 
-    # 4) Удаляем запись об Undo и подтверждаем успех
+    # Удаляем запись об откате и возвращаем успех
     action.delete()
     return JsonResponse({'success': True})
 
@@ -404,11 +471,7 @@ from openpyxl.utils import get_column_letter
 # Экспорт заявок в Excel
 class ExportExcelView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        # 1. Получаем набор заявок (администратор – все, иначе только свои)
-        if request.user.is_staff:
-            qs = FlightRequest.objects.all()
-        else:
-            qs = FlightRequest.objects.filter(user_id=request.user.id)
+        qs = FlightRequest.objects.all()
         
         # 1.1. Применяем фильтрацию по GET-параметрам
         status = request.GET.get('status')
@@ -463,8 +526,7 @@ class ExportExcelView(LoginRequiredMixin, View):
         ws = wb.active
         ws.title = "Flight Requests"
         
-        # 4. Заголовок файла и дата экспорта (опционально, можно добавить несколько строк)
-        # Например, объединяем ячейки от A1 до I1 для заголовка
+        # 4. Заголовок файла и дата экспорта
         ws.merge_cells('A1:I1')
         ws['A1'] = "Список заявок"
         ws['A1'].font = Font(size=14, bold=True)
@@ -479,7 +541,7 @@ class ExportExcelView(LoginRequiredMixin, View):
         # Начинаем данные с 4 строки
         row_num = 4
         
-        # 5. Заголовки столбцов и их ширины (по аналогии с расположением на сайте)
+        # 5. Заголовки столбцов и их ширины
         columns = ['Статус', '№', 'Тип объекта', 'Название объекта', 'Пикеты', 'Дата съемки', 'Тип съемки', 'Примечание', 'Создатель']
         col_widths = [14, 8, 20, 30, 20, 30, 17, 25, 20]  # ширины в единицах Excel (примерные)
         
@@ -496,7 +558,7 @@ class ExportExcelView(LoginRequiredMixin, View):
                 bottom=Side(style='thin')
             )
             cell.border = thin_border
-            col_letter = get_column_letter(col_num)  # Используем get_column_letter
+            col_letter = get_column_letter(col_num)
             ws.column_dimensions[col_letter].width = col_widths[col_num - 1]
         
         # 6. Заполнение строк данными
@@ -545,10 +607,9 @@ class ExportExcelView(LoginRequiredMixin, View):
                 cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
                 cell.border = thin_border
         
-        # 7. Опционально: можно зафиксировать строку заголовка
         ws.freeze_panes = "A5"
         
-        # 8. Сохраняем книгу в HttpResponse
+        # 7. Сохраняем книгу в HttpResponse
         wb.save(response)
         return response
 
@@ -559,11 +620,7 @@ class ExportExcelView(LoginRequiredMixin, View):
 # Экспорт заявок в PDF
 class ExportPDFView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        # 1. Получаем набор заявок (администратор — все, иначе только свои)
-        if request.user.is_staff:
-            qs = FlightRequest.objects.all()
-        else:
-            qs = FlightRequest.objects.filter(user_id=request.user.id)
+        qs = FlightRequest.objects.all()
         
         # 1.1. Применяем фильтрацию по GET-параметрам
         status = request.GET.get('status')
@@ -630,7 +687,7 @@ class ExportPDFView(LoginRequiredMixin, View):
             rightMargin=20,
             topMargin=15,
             bottomMargin=15,
-            title=doc_title  # <-- Указываем title с датой
+            title=doc_title
         )
 
         elements = []
@@ -670,15 +727,15 @@ class ExportPDFView(LoginRequiredMixin, View):
             fontName=base_font,
             fontSize=9,
             leading=10,
-            alignment=0  # Выравнивание по левому краю
+            alignment=0
         )
         style_header = ParagraphStyle(
             'Header',
             parent=styles['Normal'],
-            fontName=bold_font,   # Жирный шрифт
-            fontSize=9,           # Размер как у данных или немного больше, если нужно
+            fontName=bold_font,
+            fontSize=9,
             leading=10,
-            alignment=1           # Центрирование заголовков
+            alignment=1
         )
 
 
@@ -690,7 +747,7 @@ class ExportPDFView(LoginRequiredMixin, View):
         elements.append(Paragraph(f"Дата экспорта: {export_date_str}", style_date))
         elements.append(Spacer(1, 16))
         
-        # 7. Описание столбцов (порядок как на сайте)
+        # 7. Описание столбцов
         headings = (
             "Статус",
             "№",
@@ -744,15 +801,15 @@ class ExportPDFView(LoginRequiredMixin, View):
         
         # 9. Задаем ширину столбцов так, чтобы таблица влезала на горизонтальном A4
         col_widths = [
-            1.0*inch,  # Статус
-            0.5*inch,  # №
-            1.2*inch,  # Тип объекта
-            1.7*inch,  # Название объекта
-            1.15*inch,  # Пикеты
-            1.3*inch,  # Дата съемки
-            1.35*inch,  # Тип съемки
-            1.4*inch,  # Примечание
-            1.3*inch,  # Создатель
+            1.0*inch,
+            0.5*inch,
+            1.2*inch,
+            1.7*inch,
+            1.15*inch,
+            1.3*inch, 
+            1.35*inch,
+            1.4*inch,
+            1.3*inch,
         ]
 
         # 10. Создаем таблицу
@@ -775,7 +832,7 @@ class ExportPDFView(LoginRequiredMixin, View):
         table.setStyle(table_style)
         elements.append(table)
         
-        # 11. Настройка шаблона страниц (опционально)
+        # 11. Настройка шаблона страниц
         frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normal')
         template = PageTemplate(id='template', frames=[frame])
         doc.addPageTemplates([template])
@@ -999,10 +1056,6 @@ class UploadTempFileView(View):
         if not upload_type:
             return HttpResponseBadRequest("upload_type обязателен")
 
-        # Выбираем/создаем форму в зависимости от типа
-        # Можно переиспользовать те же формы: OrthoUploadForm, LaserUploadForm...
-        # но придется чуть адаптировать (т.к. там поля назваются по-другому).
-        # Либо создать TempUploadForm, которая обрабатывает любой файл/ссылку.
         if upload_type == 'ortho':
             form = OrthoUploadForm(request.POST, request.FILES)
         elif upload_type == 'laser':
@@ -1016,7 +1069,6 @@ class UploadTempFileView(View):
 
         if form.is_valid():
             if upload_type == 'ortho':
-                # Используем ключ "orthoFile" вместо "file"
                 temp_file = form.cleaned_data['orthoFile']
                 view_link = form.cleaned_data.get('view_link')
                 temp_result = TempResultFile.objects.create(
@@ -1028,7 +1080,6 @@ class UploadTempFileView(View):
                 )
                 temp_id = temp_result.id
             elif upload_type == 'laser':
-                # Используем ключ "laserFile" вместо "file"
                 temp_file = form.cleaned_data['laserFile']
                 view_link = form.cleaned_data.get('laserViewInput') or None
                 temp_result = TempResultFile.objects.create(
@@ -1049,7 +1100,6 @@ class UploadTempFileView(View):
                 )
                 temp_id = temp_result.id
             elif upload_type == 'overview':
-                # Для Overview ожидаем один файл, а не список:
                 temp_file = request.FILES.get('overviewFiles')
                 if not temp_file:
                     return JsonResponse({'success': False, 'error': 'Не выбран файл для загрузки.'}, status=400)
@@ -1093,11 +1143,10 @@ class ConfirmTempFileView(View):
         except FlightRequest.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Заявка не найдена'}, status=404)
 
-        # --- Обработка одиночного файла (ortho, laser, panorama, overview) ---
         temp_id = request.POST.get('temp_id', '').strip()
         view_link_param = request.POST.get('view_link', '').strip()
 
-        # Если temp_id отсутствует, но передана ссылка — обрабатываем только обновление ссылки (например, для лазера)
+        # Если temp_id отсутствует, но передана ссылка — обрабатываем только обновление ссылки
         if not temp_id and view_link_param:
             existing_obj = FlightResultFile.objects.filter(
                 flight_request=flight,
@@ -1115,7 +1164,7 @@ class ConfirmTempFileView(View):
                 )
                 return JsonResponse({'success': True, 'message': 'Ссылка успешно сохранена (новая запись создана)'})
 
-        # Если temp_id всё ещё отсутствует, выдаём ошибку (новый файл ещё не загружен)
+        # Если temp_id всё ещё отсутствует, выдаём ошибку
         if not temp_id:
             return HttpResponseBadRequest("temp_id обязательны.")
 

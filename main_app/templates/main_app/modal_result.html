@@ -12,15 +12,6 @@
       <div class="modal-body">
         <!-- Контейнер для динамического наполнения разделов -->
         <div id="resultContent">
-          
-          <!-- Индикатор загрузки (по умолчанию скрыт) -->
-          <div id="loadingIndicator" style="display: none; text-align: center; margin: 20px;">
-            <div class="spinner-border text-primary" role="status">
-              <span class="sr-only">Загрузка...</span>
-            </div>
-            <p>Загрузка данных...</p>
-          </div>
-          
           <!-- Раздел для Ортофотоплана -->
           <div id="orthoSection" class="card mb-2 result-section" style="display: none;">
             <div class="card-header">Ортофотоплан</div>
@@ -145,16 +136,15 @@
               </p>
 
               {% if user.is_staff %}
-              <!-- Кнопка "Загрузить" (на самом деле показывает форму для ввода ссылки) -->
+              <!-- Кнопка "Загрузить" -->
               <button class="btn btn-outline-primary btn-sm uploadBtn" data-type="panorama">Загрузить</button>
 
-              <!-- Секция загрузки (на самом деле просто ввод ссылки), скрыта по умолчанию -->
+              <!-- Секция ввода ссылки-->
               <div id="panoramaUpload" class="upload-section" style="display: none;">
                 <h6 class="mb-3">Сохранить ссылку для Панорамы</h6>
                 <form id="panoramaUploadForm" data-request-id="{{ flight_request.id }}">
                   <div class="form-group mb-3">
                     <label for="panoramaViewInput" class="font-weight-medium">Введите ссылку для просмотра панорамы:</label>
-                    <!-- Имя поля совпадает с тем, что ждёт ваша форма PanoramaUploadForm (panoramaViewInput) -->
                     <input type="url" id="panoramaViewInput" name="panoramaViewInput" class="form-control" placeholder="http://">
                   </div>
                   <button type="submit" class="btn btn-primary btn-sm">Сохранить</button>

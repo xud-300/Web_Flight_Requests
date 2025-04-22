@@ -350,7 +350,7 @@ tr.selected {
 
 /* Стиль для текущей страницы */
 .pagination span.current {
-  background-color: #007bff; /* акцентный цвет, можно заменить вашим */
+  background-color: #007bff;
   color: #fff;
   border-color: #007bff;
 }

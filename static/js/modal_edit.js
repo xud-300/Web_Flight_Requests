@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Проверяем, начинается ли cookie с нужного имени
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
@@ -142,25 +141,14 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let fieldName in errors) {
             // Если ошибка не привязана к конкретному полю
             if (fieldName === '__all__') {
-                // Используем контейнер с id="piketErrorSpace"
-                let errorContainer = form.querySelector('#piketErrorSpace');
-                if (!errorContainer) {
-                    // Если его нет, создаём и добавляем его в подходящее место (например, в piketContainer)
-                    errorContainer = document.createElement('div');
-                    errorContainer.id = 'piketErrorSpace';
-                    errorContainer.style.marginLeft = '10px';
-                    errorContainer.className = 'invalid-feedback d-block';
-                    const piketContainer = form.querySelector('#piketContainer');
-                    if (piketContainer) {
-                        piketContainer.appendChild(errorContainer);
-                    } else {
-                        form.insertBefore(errorContainer, form.firstChild);
-                    }
-                }
-                errorContainer.classList.add('invalid-feedback', 'd-block');
-                errorContainer.innerHTML = errors[fieldName].join('<br>');
-                continue; // Переходим к следующей ошибке
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ошибка',
+                    html: errors[fieldName].join('<br>')
+                });
+                continue;
             }
+            
     
             // Стандартная обработка для полей
             const field = form.querySelector('[name="' + fieldName + '"]');
@@ -297,15 +285,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для инициализации Date Range Picker в окне редактирования
     function attachEditDateRangePicker() {
         const editDateRangeInput = document.getElementById('id_edit_date_range');
-        if (!editDateRangeInput) return; // Если элемент не найден, выходим
+        if (!editDateRangeInput) return;
 
-        // Получаем скрытые поля с датами
         const shootDateFromEl = document.getElementById('id_edit_shoot_date_from');
         const shootDateToEl = document.getElementById('id_edit_shoot_date_to');
         let startDate = moment();
         let endDate = moment();
 
-        // Если в скрытых полях уже есть значения, используем их для инициализации
         if (shootDateFromEl && shootDateFromEl.value) {
             startDate = moment(shootDateFromEl.value, 'YYYY-MM-DD');
         }
@@ -352,13 +338,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const formElements = form.querySelectorAll('input, select, textarea');
         
         formElements.forEach(element => {
-            // Для текстовых полей и textarea достаточно события input
             element.addEventListener('input', function() {
                 clearFieldError(element);
             });
             
-            // Для select (выпадающих списков) часто удобнее событие change
-            // (хотя во многих браузерах input на select тоже срабатывает)
             element.addEventListener('change', function() {
                 clearFieldError(element);
             });
@@ -380,7 +363,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const historyBlock = $('#requestHistory');
             const historyTitle = $('#historyTitle');
         
-            // Прячем изначально через jQuery, чтобы мы точно знали, что hidden
             historyTitle.hide();
             historyBlock.hide();
         
@@ -401,87 +383,86 @@ document.addEventListener('DOMContentLoaded', function() {
         
 
     
-    // Обработчик для всех кнопок редактирования заявки
-    const editButtons = document.querySelectorAll('.editRequestBtn');
-    editButtons.forEach(function(button) {
-        button.addEventListener('click', function() {
-            const requestId = this.getAttribute('data-request-id');
-            const url = `/main_app/requests/edit/${requestId}/?ajax=1`;
-            console.log("Запрос редактирования по URL:", url);
-            fetch(url, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                if (response.status === 403) {
-                    throw new Error("У вас нет прав для редактирования этой заявки.");
-                }
-                if (!response.ok) {
-                    throw new Error("Ошибка загрузки данных для редактирования");
-                }
-                return response.text();
-            })
-            .then(html => {
-                const formContainer = document.getElementById('editRequestFormContainer');
-                if (formContainer) {
-                    formContainer.innerHTML = html;
-                    attachDynamicListeners();
-                    attachEditFormSubmitHandler();
-                    attachDeleteRequestHandler();
-                    attachEditDateRangePicker();
-                    attachHistoryToggle();
-            
-                    const editForm = document.getElementById('editRequestForm');
-                    if (editForm) {
-                        // Добавляем обработчики, чтобы ошибки исчезали сразу при вводе/выборе
-                        attachFieldErrorClearing(editForm);
-            
-                        const isEditable = editForm.dataset.editable;
-                        console.log("Редактируемость формы:", isEditable);
-                        if (isEditable && isEditable.toLowerCase() === "false") {
-                            // Если редактирование запрещено, отключаем все поля и кнопки
-                            const elements = editForm.querySelectorAll('input, select, textarea, button');
-                            elements.forEach(el => {
-                                el.disabled = true;
-                            });
-                            // Добавляем уведомление в начале формы
-                            const notice = document.createElement('p');
-                            notice.style.color = 'red';
-                            notice.textContent = 'Редактирование запрещено: заявка завершена.';
-                            editForm.insertBefore(notice, editForm.firstChild);
-                        } else {
-                            // Если редактирование разрешено, инициируем обработку типа объекта
-                            const objectTypeSelect = document.getElementById('id_edit_object_type');
-                            if (objectTypeSelect) {
-                                const initialType = objectTypeSelect.dataset.initialType;
-                                console.log("Initial type from dataset:", initialType);
-                                if (initialType === "2" || initialType === "4") {
-                                    objectTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    console.error("Контейнер editRequestFormContainer не найден");
-                }
-                const editModal = document.getElementById('editRequestModal');
-                if (editModal) {
-                    $('#editRequestModal').modal('show');
-                }
-            })
-            
 
-            .catch(error => {
-                console.error("Ошибка при загрузке данных для редактирования:", error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Ошибка',
-                    text: error.message
-                });
-            });
+// Делегируем клик по кнопкам редактирования заявок
+document.body.addEventListener('click', function(event) {
+    const btn = event.target.closest('.editRequestBtn');
+    if (!btn) return;
+  
+    event.preventDefault();
+    const requestId = btn.getAttribute('data-request-id');
+    const url = `/main_app/requests/edit/${requestId}/?ajax=1`;
+    console.log("Запрос редактирования по URL:", url);
+  
+    fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(response => {
+        if (response.status === 403) {
+          throw new Error("У вас нет прав для редактирования этой заявки.");
+        }
+        if (!response.ok) {
+          throw new Error("Ошибка загрузки данных для редактирования");
+        }
+        return response.text();
+      })
+      .then(html => {
+        const formContainer = document.getElementById('editRequestFormContainer');
+        if (!formContainer) {
+          console.error("Контейнер editRequestFormContainer не найден");
+          return;
+        }
+  
+        formContainer.innerHTML = html;
+        // Инициализируем логику модалки заново
+        attachDynamicListeners();
+        attachEditFormSubmitHandler();
+        attachDeleteRequestHandler();
+        attachEditDateRangePicker();
+        attachHistoryToggle();
+  
+        const editForm = document.getElementById('editRequestForm');
+        if (editForm) {
+          attachFieldErrorClearing(editForm);
+  
+          const isEditable = editForm.dataset.editable;
+          console.log("Редактируемость формы:", isEditable);
+          if (isEditable && isEditable.toLowerCase() === "false") {
+            // Заблокировать все поля и кнопки
+            editForm.querySelectorAll('input, select, textarea, button')
+                    .forEach(el => el.disabled = true);
+            const notice = document.createElement('p');
+            notice.style.color = 'red';
+            notice.textContent = 'Редактирование запрещено: заявка завершена.';
+            editForm.insertBefore(notice, editForm.firstChild);
+          } else {
+            // Демо инит select-а, если нужно
+            const objectTypeSelect = document.getElementById('id_edit_object_type');
+            if (objectTypeSelect) {
+              const initialType = objectTypeSelect.dataset.initialType;
+              console.log("Initial type from dataset:", initialType);
+              if (initialType === "2" || initialType === "4") {
+                objectTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }
+          }
+        }
+  
+        // Показываем сам модал
+        $('#editRequestModal').modal('show');
+      })
+      .catch(error => {
+        console.error("Ошибка при загрузке данных для редактирования:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Ошибка',
+          text: error.message
         });
-    });
+      });
+  });
+  
     
 
     // Обработчики закрытия модального окна

@@ -18,21 +18,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     
-  // Обработчик для кнопок "Результат"
-  document.querySelectorAll('.resultBtn').forEach(function(button) {
-    button.addEventListener('click', function() {
-      const requestId = button.getAttribute('data-request-id');
-      console.log("Открываем модальное окно для заявки с ID:", requestId);
-      
-      // Открываем модальное окно (если используется Bootstrap, например, через jQuery)
-      $('#resultModal').modal('show');
-      
-      // Если нужно динамически подгружать данные, можно вызвать функцию:
-      loadResultData(requestId);
+    // Делегируем клик по кнопкам "Результат" даже для динамически добавленных
+    document.body.addEventListener('click', function(event) {
+        const btn = event.target.closest('.resultBtn');
+        if (!btn) return;
+        event.preventDefault();
+        const requestId = btn.getAttribute('data-request-id');
+        console.log("Открываем модальное окно для заявки с ID:", requestId);
+        $('#resultModal').modal('show');
+        loadResultData(requestId);
     });
-  });
+    
 
-// Пример функции загрузки данных для модального окна (заглушка)
+// Функции загрузки данных для модального окна
 window.loadResultData = function(requestId) {
     const url = `/main_app/requests/get_results/?request_id=${requestId}`;
     console.log("Запрос результатов по URL:", url);
@@ -46,9 +44,7 @@ window.loadResultData = function(requestId) {
       })
       .then(data => {
         console.log("Получены данные результатов:", data);
-        // populateResultModal(data) можно тоже сделать глобальной, если она в другом файле
         populateResultModal(data);
-        // setRequestIdInForms(requestId) тоже будет работать, если она доступна
         setRequestIdInForms(requestId);
       })
       .catch(error => {
@@ -68,10 +64,9 @@ const statusActions = {};
 
 // показываем кнопку «Отменить» внутри massUpdatePanel
 function showUndoInPanel(actionId) {
-    undoActive = true;                           // <<< включили блокировку выбора
+    undoActive = true;                           
     $('#massUpdatePanel').collapse('show');
   
-    // спрячем дефолтные кнопки и сообщение
     document.getElementById('massUpdateMessage').innerHTML = '';
     document.getElementById('massUpdateButtons').innerHTML = '';
     document.getElementById('massResetButton').style.display = 'none';
@@ -88,7 +83,7 @@ function showUndoInPanel(actionId) {
         timer--;
         if (timer === 0) {
           clearInterval(intervalId);
-          undoActive = false;  // снимаем блокировку выбора бейджей
+          undoActive = false;
       
           // плавно сворачиваем панель и после её скрытия восстанавливаем кнопки и бейджи
           $('#massUpdatePanel')
@@ -99,7 +94,6 @@ function showUndoInPanel(actionId) {
               document.getElementById('massDeleteButton').style.display = '';
               // разблокируем бейджи
               enableAllBadges();
-              // снимаем этот разовый обработчик
               $(this).off('hidden.bs.collapse');
             });
         } else {
@@ -113,8 +107,7 @@ function showUndoInPanel(actionId) {
       $('#massUpdatePanel')
         .collapse('hide')
         .one('hidden.bs.collapse', function() {
-          // сбросим всё в дефолт
-          undoActive = false;                               // <<< снимаем блокировку
+          undoActive = false;                               
           document.getElementById('massUpdateMessage').innerHTML = '';
           document.getElementById('massUpdateButtons').innerHTML = '';
           document.getElementById('massResetButton').style.display = '';
@@ -136,23 +129,21 @@ function showUndoInPanel(actionId) {
             return alert(data.error);
           }
       
-          // 4a) Если были массовые удаления — восстанавливаем строки
+          // Если были массовые удаления — восстанавливаем строки
           if (removedRows[actionId]) {
             const tbody = document.querySelector('tbody');
             removedRows[actionId].forEach(({ html, rowIndex }) => {
               const temp = document.createElement('tbody');
               temp.innerHTML = html;
               const newRow = temp.querySelector('tr');
-              // вставляем на своё место
               const ref = tbody.children[rowIndex] || null;
               tbody.insertBefore(newRow, ref);
           
-              // --- Очищаем эффект "нажатости" ---
+              //  Очищаем эффект "нажатости"
               newRow.classList.remove('selected');
               const badge = newRow.querySelector('.selectable-status');
               if (badge) {
                 badge.classList.remove('active', 'no-hover');
-                // если нужно, можно ещё явно вернуть pointerEvents и opacity
                 badge.style.pointerEvents = '';
                 badge.style.opacity = '';
               }
@@ -162,7 +153,7 @@ function showUndoInPanel(actionId) {
           
           
       
-          // 4b) Если была массовая смена статуса — восстанавливаем бейджи
+          // Если была массовая смена статуса — восстанавливаем бейджи
           if (statusActions[actionId]) {
             statusActions[actionId].forEach(({ id, oldStatus }) => {
               const badge = document.querySelector(`.selectable-status[data-request-id="${id}"]`);
@@ -195,7 +186,7 @@ function setRequestIdInForms(requestId) {
     });
   }
   
-    // --- Фильтрация: динамическая подгрузка названий объектов ---
+    // Фильтрация: динамическая подгрузка названий объектов ---
     const objectTypeFilter = document.getElementById('objectTypeFilter');
     const objectNameFilterContainer = document.getElementById('objectNameFilterContainer');
     const objectNameFilter = document.getElementById('objectNameFilter');
@@ -238,10 +229,10 @@ function setRequestIdInForms(requestId) {
     
     // Инициализация Date Range Picker
     $('#dateRangeFilter').daterangepicker({
-        autoApply: true,              // не требует кнопки "Apply"
-        autoUpdateInput: false,       // поле заполняем вручную
+        autoApply: true,              
+        autoUpdateInput: false,       
         locale: {
-            format: 'DD.MM.YYYY',     // виджет будет парсить/отображать этот формат
+            format: 'DD.MM.YYYY',     
             cancelLabel: 'Очистить',
             applyLabel: 'Применить',
             daysOfWeek: ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
@@ -254,11 +245,8 @@ function setRequestIdInForms(requestId) {
 
     // Обработка события "apply"
     $('#dateRangeFilter').on('apply.daterangepicker', function(ev, picker) {
-        // Формируем человекочитаемую строку
         const rangeText = picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY');
-        // Устанавливаем в поле
         $(this).val(rangeText);
-        // Сохраняем в скрытых полях в формате "YYYY-MM-DD"
         document.getElementById('shoot_date_from').value = picker.startDate.format('YYYY-MM-DD');
         document.getElementById('shoot_date_to').value = picker.endDate.format('YYYY-MM-DD');
     });
@@ -327,7 +315,7 @@ function setRequestIdInForms(requestId) {
         // Очищаем контейнер кнопок
         buttonsContainer.innerHTML = '';
     
-        // Формируем сообщение, например, "Выбраны 3 заявки со статусом «В работе». Выберите действие:"
+        // Формируем сообщение
         massUpdateMessage.innerHTML = `Выбраны ${selectedRequestIds.length} заявок со статусом <strong>${selectedStatus}</strong>. Выберите действие:`;
     
         // Дальше — генерируем кнопки для перевода статуса
@@ -378,7 +366,6 @@ function setRequestIdInForms(requestId) {
 // Функция для отправки AJAX-запроса на массовое обновление статуса
 function massUpdateStatusAjax(newStatus) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    // Схватим текущие статусы, чтобы потом восстановить
     const oldStatuses = selectedRequestIds.map(id => {
       const badge = document.querySelector(`.selectable-status[data-request-id="${id}"]`);
       return { id, oldStatus: badge ? badge.textContent.trim() : null };
@@ -409,7 +396,6 @@ function massUpdateStatusAjax(newStatus) {
                 const badge = document.querySelector('.selectable-status[data-request-id="' + id + '"]');
                 if (badge) {
                     if (newStatus === 'В работе') {
-                        // Устанавливаем для "В работе" – синий
                         badge.textContent = 'В работе';
                         badge.classList.remove('badge-success', 'badge-secondary');
                         badge.classList.add('badge-primary');
@@ -455,92 +441,85 @@ function massUpdateStatusAjax(newStatus) {
         $('#massUpdatePanel').collapse('hide');
     }
 
-    // При клике на бейдж статуса
-// При клике на бейдж статуса
-document.querySelectorAll('.selectable-status').forEach(function(badge) {
-    badge.addEventListener('click', function(event) {
-        // 0) Если сейчас активен Undo — ничего не делаем
-        if (undoActive) return;
 
-        const requestId = badge.getAttribute('data-request-id');
-        const row = badge.closest('tr');
-        const rowStatus = badge.textContent.trim();
+// Делегируем клик по бейджам статуса (mass select)
+document.body.addEventListener('click', function(event) {
+    const badge = event.target.closest('.selectable-status');
+    if (!badge) return;
+    if (undoActive) return;// пока идёт таймер Undo — игнорируем клики
+    event.preventDefault();
+  
+    const requestId = badge.getAttribute('data-request-id');
+    const row = badge.closest('tr');
+    const rowStatus = badge.textContent.trim();
+  
+    // Если ещё не выбрана группа — начинаем
+    if (!selectedGroupStatus) {
+      selectedGroupStatus = rowStatus;
+      disableOppositeBadges(selectedGroupStatus);
+      updateMassUpdatePanel(selectedGroupStatus);
+    }
+    // Игнорим, если клик по статусу другого типа
+    if (rowStatus !== selectedGroupStatus) {
+      return;
+    }
+  
+    // Переключаем выделение строки
+    if (row.classList.contains('selected')) {
+      row.classList.remove('selected');
+      selectedRequestIds = selectedRequestIds.filter(id => id !== requestId);
+      badge.classList.remove('active');
+      badge.classList.add('no-hover');
+      setTimeout(() => badge.classList.remove('no-hover'), 300);
+  
+      if (selectedRequestIds.length === 0) {
+        selectedGroupStatus = null;
+        enableAllBadges();
+        hideMassUpdatePanel();
+      }
+    } else {
+      row.classList.add('selected');
+      selectedRequestIds.push(requestId);
+      badge.classList.add('active');
+    }
+  
+    // Показываем или прячем панель в зависимости от выделений
+    if (selectedRequestIds.length > 0) {
+      showMassUpdatePanel();
+      updateMassUpdatePanel(selectedGroupStatus);
+    } else {
+      hideMassUpdatePanel();
+    }
+  });
 
-        // 1) Если ещё не задана группа — начинаем выбор
-        if (!selectedGroupStatus) {
-            selectedGroupStatus = rowStatus;
-            disableOppositeBadges(selectedGroupStatus);
-            updateMassUpdatePanel(selectedGroupStatus);
-        }
-
-        // 2) Если кликнули по статусу не из текущей группы — игнорируем
-        if (rowStatus !== selectedGroupStatus) {
-            return;
-        }
-
-        // 3) Переключаем выделение этой строки
-        if (row.classList.contains('selected')) {
-            row.classList.remove('selected');
-            selectedRequestIds = selectedRequestIds.filter(id => id !== requestId);
-            badge.classList.remove('active');
-            badge.classList.add('no-hover');
-            setTimeout(() => badge.classList.remove('no-hover'), 300);
-
-            // Если больше ничего не выделено — сбрасываем всё
-            if (selectedRequestIds.length === 0) {
-                selectedGroupStatus = null;
-                enableAllBadges();
-                hideMassUpdatePanel();
-            }
-        } else {
-            row.classList.add('selected');
-            selectedRequestIds.push(requestId);
-            badge.classList.add('active');
-        }
-
-        // 4) Показываем или скрываем панель в зависимости от наличия выделений
-        if (selectedRequestIds.length > 0) {
-            showMassUpdatePanel();
-            updateMassUpdatePanel(selectedGroupStatus);
-        } else {
-            hideMassUpdatePanel();
-        }
-    });
-});
-
-    
-    
-
- 
 
     // Обработчик кнопки "Сбросить выбор"
     const massResetButton = document.getElementById('massResetButton');
     if (massResetButton) {
         massResetButton.addEventListener('click', function(event) {
-            // 1. Убираем класс 'selected' у всех строк
+            //  Убираем класс 'selected' у всех строк
             document.querySelectorAll('tr.selected').forEach(function(row) {
                 row.classList.remove('selected');
             });
-            // 2. Убираем класс 'active' у всех бейджей
+            // Убираем класс 'active' у всех бейджей
             document.querySelectorAll('.selectable-status.active').forEach(function(badge) {
                 badge.classList.remove('active');
             });
-            // 3. Сбрасываем массив выбранных заявок и статус группы
+            // Сбрасываем массив выбранных заявок и статус группы
             selectedRequestIds = [];
             selectedGroupStatus = null;
-            // 4. Восстанавливаем кликабельность всех бейджей
+            // Восстанавливаем кликабельность всех бейджей
             enableAllBadges();
-            // 5. Скрываем панель массового обновления
+            // Скрываем панель массового обновления
             hideMassUpdatePanel();
         });
     }
     
 
-    // Пример JS-обработчика
     const massDeleteButton = document.getElementById('massDeleteButton');
     if (massDeleteButton) {
         massDeleteButton.addEventListener('click', function() {
-            // 1. Проверяем, выбраны ли заявки
+            // Проверяем, выбраны ли заявки
             if (selectedRequestIds.length === 0) {
                 Swal.fire({
                     icon: 'info',
@@ -550,7 +529,6 @@ document.querySelectorAll('.selectable-status').forEach(function(badge) {
                 return;
             }
 
-            // 2. Показываем окно подтверждения
             Swal.fire({
                 title: 'Удалить заявки?',
                 text: "Вы уверены, что хотите удалить выбранные заявки?",
@@ -560,7 +538,6 @@ document.querySelectorAll('.selectable-status').forEach(function(badge) {
                 cancelButtonText: 'Отмена'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // 3. Если пользователь нажал "Да, удалить", отправляем запрос
                     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
                     fetch('/main_app/requests/mass_delete/', {
                         method: 'POST',
@@ -579,7 +556,7 @@ document.querySelectorAll('.selectable-status').forEach(function(badge) {
                     })
                     .then(data => {
                         if (data.success) {
-                          // 1) Собираем удаляемые строки в память
+                          // Собираем удаляемые строки в память
                           removedRows[data.action_id] = selectedRequestIds.map(id => {
                             const row   = document.querySelector(`.selectable-status[data-request-id="${id}"]`).closest('tr');
                             const html  = row.outerHTML;
@@ -591,12 +568,12 @@ document.querySelectorAll('.selectable-status').forEach(function(badge) {
                           });
                           
                       
-                          // 2) Сбрасываем текущее выделение
+                          // Сбрасываем текущее выделение
                           selectedRequestIds = [];
                           selectedGroupStatus = null;
                           enableAllBadges();
                       
-                          // 3) Показываем Undo‑кнопку
+                          // Показываем Undo‑кнопку
                           showUndoInPanel(data.action_id);
                         } else {
                             Swal.fire({

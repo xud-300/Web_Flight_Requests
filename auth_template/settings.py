@@ -26,10 +26,6 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_COOKIE_HTTPONLY = False
 
-# Настройки URL для входа и выхода пользователя
-# LOGIN_URL = 'login'
-# LOGOUT_URL = 'logout'
-# LOGIN_REDIRECT_URL = '/'
 
 # Установленные приложения в проекте
 INSTALLED_APPS = [

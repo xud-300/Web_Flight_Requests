@@ -197,15 +197,14 @@
 }
 
 /* Стили для неактивной области Drop Zone */
-/* Если используете класс drop-zone--disabled */
 .drop-zone--disabled,
 .drop-zone--disabled:hover {
-  background-color: #ddd !important;  /* Серый фон */
-  border-color: #aaa !important;      /* Серая рамка */
-  color: #999 !important;            /* Серая надпись */
-  cursor: default !important;        /* Обычный курсор */
-  opacity: 0.6 !important;           /* Полупрозрачность */
-  pointer-events: none !important;   /* Запрет на события */
+  background-color: #ddd !important;
+  border-color: #aaa !important;
+  color: #999 !important;
+  cursor: default !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
 }
 /* Если используете атрибут disabled */
 .drop-zone[disabled],
